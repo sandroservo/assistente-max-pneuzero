@@ -1,0 +1,19 @@
+[Unit]
+Description=Assistente Max - Pneuzero (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/www/pneuzero
+Environment=NODE_ENV=production
+Environment=PORT=3001
+ExecStart=/usr/bin/npm run start:prod
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=assistente-max-app
+
+[Install]
+WantedBy=multi-user.target

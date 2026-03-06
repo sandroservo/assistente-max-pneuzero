@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #F8F7FA;
+  --foreground: #1a1a2e;
+  --card: #ffffff;
+  --card-foreground: #1a1a2e;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a2e;
+  --primary: #CC0000;
+  --primary-foreground: #ffffff;
+  --secondary: #F8F7FA;
+  --secondary-foreground: #1a1a2e;
+  --muted: #F8F7FA;
+  --muted-foreground: #6b7280;
+  --accent: #fff5f5;
+  --accent-foreground: #CC0000;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #CC0000;
+  --radius: 0.75rem;
+  
+  --red-primary: #CC0000;
+  --red-secondary: #990000;
+  --purple-primary: #1a1a1a;
+  --bg-light: #F8F7FA;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Sora', var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+.premium-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: 
+    0 1px 3px 0 rgb(0 0 0 / 0.04),
+    0 4px 6px -1px rgb(0 0 0 / 0.05),
+    0 10px 15px -3px rgb(0 0 0 / 0.03);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.premium-card:hover {
+  box-shadow: 
+    0 4px 6px -1px rgb(0 0 0 / 0.06),
+    0 10px 15px -3px rgb(0 0 0 / 0.08),
+    0 20px 25px -5px rgb(0 0 0 / 0.05);
+  transform: translateY(-1px);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--red-primary), var(--purple-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, var(--red-primary), var(--purple-primary));
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.sidebar-gradient {
+  background: #ffffff;
+}
+
+.stat-icon {
+  background: linear-gradient(135deg, var(--red-primary), var(--red-secondary));
+  box-shadow: 0 4px 14px 0 rgba(204, 0, 0, 0.3);
+}
+
+.nav-active {
+  background: var(--red-primary);
+  box-shadow: 0 4px 14px 0 rgba(204, 0, 0, 0.35);
+}
+
+.premium-input {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+
+.premium-input:focus {
+  border-color: var(--red-primary);
+  box-shadow: 0 0 0 3px rgba(204, 0, 0, 0.1);
+  outline: none;
+}
+
+.premium-button {
+  background: var(--red-primary);
+  color: white;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px 0 rgba(204, 0, 0, 0.3);
+}
+
+.premium-button:hover {
+  background: var(--red-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(204, 0, 0, 0.4);
+}
+
+.premium-badge {
+  background: rgba(204, 0, 0, 0.1);
+  color: var(--red-primary);
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.badge-red {
+  background: var(--red-primary);
+  color: white;
+}
+
+.badge-purple {
+  background: var(--purple-primary);
+  color: white;
+}
+
+.badge-magenta {
+  background: var(--red-secondary);
+  color: white;
+}
+
+.badge-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+}
+
+/* Esconde a barra de scroll mantendo o scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.scrollbar-hide::-webkit-scrollbar-track,
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  display: none !important;
+}
