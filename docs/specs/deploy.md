@@ -134,6 +134,64 @@ Deploy inicial executado em **2026-05-10 20:57 UTC**.
 | SSL | Let's Encrypt (renova automático até 2026-08-08); Cloudflare proxy ativo |
 | Cron follow-up | `*/10 * * * *` em `/etc/cron.d/assistente-max-followup` (testado OK) |
 
+## Performance — análise 2026-05-10
+
+### Sintoma reportado
+
+Cliente (Brasil/Maranhão) percebe que rotas demoram a carregar (~2-3s).
+
+### Medições
+
+| Origem | TTFB | Total |
+|--------|------|-------|
+| Localhost no servidor (`127.0.0.1:3004`) | **5 ms** | 5 ms |
+| Nginx local (HTTPS Host header) | **8 ms** | 8 ms |
+| Direto IP (bypass Cloudflare, externo) | ~1.0 s | ~1.4 s |
+| Via Cloudflare (externo) | ~1.3 s | ~2.4 s |
+
+Breakdown direto IP:
+- DNS lookup: 0 ms (cached)
+- TCP connect (3-way handshake): **1.0 s** = 2 RTT
+- TLS handshake: **+0.6 s** = ~1.5 RTT
+- App TTFB: +0.005 s
+
+**Latência pura**: ping RTT 462 ms (medido).
+
+### Causa raiz
+
+Servidor está em **DigitalOcean SFO3** (San Francisco). Cliente em
+Maranhão atravessa ~460 ms RTT. Cada handshake TCP + TLS gasta 3-4 RTT,
+chegando a 1.5-2 s antes do primeiro byte. **Aplicação não é o gargalo**
+(responde em 5 ms).
+
+### Otimizações aplicadas (servidor)
+
+- nginx **gzip** com `gzip_types` para HTML/JSON/JS/CSS (resposta 11 KB → 2.7 KB)
+- nginx **HTTP/2** ativo (`http2 on;`)
+- `location /_next/static/` com `Cache-Control: public, max-age=31536000, immutable`
+- `location /_next/image` com `max-age=86400`
+- `proxy_socket_keepalive on` para reuso de conexão upstream
+- Redirect 80 → 443 explícito
+
+Ganho esperado: 30-40% em downloads (compression) + reuso de conexão
+HTTP/2 (1 handshake serve várias requisições).
+
+### Solução real (recomendada): migrar região
+
+| Opção | Esforço | Ganho |
+|-------|---------|-------|
+| Migrar droplet inteiro SFO3 → **SP3 (São Paulo)** | Alto (afeta todas as 4 outras apps) | RTT 460→30 ms; total ~200 ms |
+| **Criar droplet SP3 só para Assistente Max** | Médio (novo servidor, deploy separado) | Mesmo ganho, isolamento |
+| Cloudflare **Argo Smart Routing** + Tiered Cache | Baixo (mexer no painel CF, plano pago $5/mo) | -30-50% latência |
+| Manter como está | Zero | Cliente continua percebendo lentidão |
+
+### Mitigações sem migrar
+
+1. **Habilitar Brotli no Cloudflare** (painel → Speed → Brotli ON)
+2. **Page Rules** no Cloudflare cachando `/_next/static/*` no edge
+3. **Always Use HTTPS** + **HTTP/3** ON no Cloudflare (reduz handshakes)
+4. **Crawler Hints** + **Speed Brain** se disponível no plano
+
 ## Como fazer deploy de novas versões
 
 ```bash
