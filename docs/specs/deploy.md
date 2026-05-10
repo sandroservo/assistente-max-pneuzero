@@ -103,13 +103,38 @@ NEXTAUTH_URL=https://<subdomínio-decidido>
 
 ★ = decisão/credencial pendente do dono.
 
-## Pendências antes do primeiro deploy
+## Status: 🟢 DEPLOY EM PRODUÇÃO
 
-1. **Subdomínio**: dono escolhe + cria registro DNS A → `64.23.167.206`.
-2. **Repo Git remoto**: hoje só commits locais. Precisa GitHub/GitLab público ou privado (SSH key do servidor para deploy key) — ou usar `rsync` direto do WSL para o servidor.
-3. **Credenciais**: OPENAI_API_KEY, EVOLUTION_BASE_URL, EVOLUTION_TOKEN, EVOLUTION_INSTANCE.
-4. **Postgres**: confirmar que não há limite no Postgres existente (max_connections, espaço).
-5. **Cota de RAM**: app Next.js consome ~400-700 MB. Servidor tem 2.7 GB livres; OK mas monitorar.
+Deploy inicial executado em **2026-05-10 20:57 UTC**.
+
+| Item | Valor |
+|------|-------|
+| URL | https://pneuzero.cloudservo.com.br |
+| Release ativa | `20260510-175357-d68714b50e` |
+| Service | `assistente-max.service` (active running, ~135MB RAM) |
+| Porta interna | 3004 |
+| DB | `assistente_max` em Postgres 17 (extensions: vector 0.8.0, uuid-ossp 1.1) |
+| User Linux | `assistente-max` |
+| Admin login | `admin@pneuzero.com.br` / `admin@01` (★ trocar senha no primeiro acesso) |
+| SSL | Let's Encrypt (renova automático até 2026-08-08); Cloudflare proxy ativo |
+| Cron follow-up | `*/10 * * * *` em `/etc/cron.d/assistente-max-followup` (testado OK) |
+
+## Como fazer deploy de novas versões
+
+```bash
+# Localmente
+git push origin main
+./scripts/deploy-prod.sh
+```
+
+Outras operações via script: `./scripts/deploy-prod.sh {status|logs|followlogs|followups|releases|rollback}`
+
+## Estado pós primeiro deploy
+
+- 1 Organization (Pneuzero) + 1 User (admin)
+- 8 ServiceCategory + 6 ServiceItem (catálogo real)
+- 8 FollowUpRule + 14 Knowledge
+- 0 Lead / Vehicle / Quote / Sale / NPS — começa zerado em produção
 
 ## Comandos de operação
 
