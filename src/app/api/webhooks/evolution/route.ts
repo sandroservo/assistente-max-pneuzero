@@ -12,6 +12,8 @@ import { transcribeAudio, describeImage } from "@/lib/media";
 import { saveMedia } from "@/lib/media-storage";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
 import { updateLeadScore, getStatusFromScore } from "@/lib/lead-score";
+import { detectOptOut } from "@/lib/followup-engine";
+import { extractNPSScore, findPendingNPS, recordNPSResponse, npsReplyMessage } from "@/lib/nps";
 
 function phoneFromJid(remoteJid: string) {
   return remoteJid.split("@")[0];
@@ -243,6 +245,40 @@ export async function POST(req: Request) {
 
     if (!text?.trim()) {
       return NextResponse.json({ ok: true, action: "no_text" });
+    }
+
+    // Detecta opt-out de follow-up
+    if (detectOptOut(text)) {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { followUpOptOut: true },
+      });
+    }
+
+    // Parser NPS: se há follow-up nps_d1 recente sem resposta, tenta extrair nota
+    const pendingNps = await findPendingNPS(lead.id);
+    if (pendingNps?.saleId) {
+      const nota = extractNPSScore(text);
+      if (nota !== null) {
+        const resp = await recordNPSResponse({
+          leadId: lead.id,
+          saleId: pendingNps.saleId,
+          conversationId: conversation.id,
+          nota,
+        });
+        const reply = npsReplyMessage(resp.categoria as "detrator" | "neutro" | "promotor");
+        await evolutionSendText({ number: phone, text: reply });
+        await prisma.message.create({
+          data: {
+            conversationId: conversation.id,
+            direction: "out",
+            type: "text",
+            body: reply,
+            sentAt: new Date(),
+          },
+        });
+        return NextResponse.json({ ok: true, action: "nps_recorded", nota });
+      }
     }
 
     // Se lead já está com humano, não responde automaticamente
