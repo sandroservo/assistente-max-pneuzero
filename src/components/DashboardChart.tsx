@@ -158,7 +158,6 @@ export function DashboardChart({ dailyData, statusData }: DashboardChartProps) {
                 allowDecimals={false}
               />
               <Tooltip content={<StatusTooltip />} />
-              Feedback submitted
               <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={28}>
                 {statusData.map((entry, index) => (
                   <Cell key={index} fill={entry.color} />

@@ -1,15 +1,17 @@
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
+ *
+ * Next.js 16 renomeou o "middleware" para "proxy".
+ * Mesma API; arquivo precisa chamar-se proxy.ts e exportar função `proxy`.
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Rotas públicas que não precisam de autenticação
   const publicRoutes = ["/login", "/register", "/api/auth", "/api/webhooks", "/api/asaas", "/api/followups/run"];
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
@@ -17,12 +19,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verifica se existe cookie de sessão do NextAuth
   const sessionToken =
     request.cookies.get("authjs.session-token")?.value ||
     request.cookies.get("__Secure-authjs.session-token")?.value;
 
-  // Se não tem token de sessão, redireciona para login
   if (!sessionToken) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
