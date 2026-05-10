@@ -1,16 +1,14 @@
-/**
- * Autor: Sandro Servo
- * Site: https://cloudservo.com.br
- *
- * Job de follow-up.
- *
- * Rodar manualmente: npx tsx scripts/run-followups.ts
- *
- * Recomendado: rodar via cron a cada 10 minutos:
- *   */10 * * * * cd /home/developer/www/assistente-max && \
- *     source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && \
- *     npx tsx scripts/run-followups.ts >> /var/log/max-followups.log 2>&1
- */
+// Autor: Sandro Servo
+// Site: https://cloudservo.com.br
+//
+// Job de follow-up.
+//
+// Rodar manualmente: npx tsx scripts/run-followups.ts
+//
+// Recomendado: rodar via cron a cada 10 minutos:
+//   */10 * * * * cd /home/developer/www/assistente-max && \
+//     source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && \
+//     npx tsx scripts/run-followups.ts >> /var/log/max-followups.log 2>&1
 
 import "dotenv/config";
 import {

@@ -124,7 +124,7 @@ export async function POST(req: Request) {
     const organizationId = org.id;
 
     // Instância (opcional): para vincular conversa ao canal
-    let instance = instanceName
+    const instance = instanceName
       ? await prisma.instance.findFirst({
           where: { instanceName, organizationId },
           include: { organization: true },
@@ -356,26 +356,35 @@ export async function POST(req: Request) {
       messageHistory,
     });
     
+    // Salva resposta do bot SEMPRE — independente do envio Evolution dar certo.
+    let sendStatus: string | null = null;
+    let sendError: string | null = null;
     try {
-      // Envia mensagem de forma humanizada (com "digitando" e pausas)
       await evolutionSendTextHumanized({ number: phone, text: botResponse });
-      
-      // Salva a resposta do bot no banco
-      await prisma.message.create({
-        data: {
-          conversationId: conversation.id,
-          direction: "out",
-          type: "text",
-          body: botResponse,
-          sentAt: new Date(),
-        },
-      });
+      sendStatus = "sent";
+    } catch (err) {
+      sendError = err instanceof Error ? err.message : String(err);
+      console.error("Erro ao enviar resposta do bot via Evolution:", err);
+      sendStatus = "failed";
+    }
 
-      await prisma.conversation.update({
-        where: { id: conversation.id },
-        data: { lastMessageAt: new Date(), unreadCount: 0 },
-      });
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        direction: "out",
+        type: "text",
+        body: botResponse,
+        status: sendStatus,
+        sentAt: sendStatus === "sent" ? new Date() : null,
+      },
+    });
 
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date(), unreadCount: 0 },
+    });
+
+    try {
       // Calcula e persiste o Lead Score (0–1.000)
       const scoreBreakdown = await updateLeadScore(lead.id, messageHistory, text ?? "");
       console.log(`Lead ${lead.id} score: ${scoreBreakdown.total}/1000 (P:${scoreBreakdown.perfil} N:${scoreBreakdown.necessidade} C:${scoreBreakdown.consciencia} B:${scoreBreakdown.comportamento} D:${scoreBreakdown.decisao})`);
@@ -427,14 +436,16 @@ export async function POST(req: Request) {
           })
           .catch((err) => console.error("Erro ao gerar resumo:", err));
       }
-    } catch (sendError) {
-      console.error("Erro ao enviar resposta do bot:", sendError);
+    } catch (postProcessErr) {
+      console.error("Erro no pós-processamento (score/status/summary):", postProcessErr);
     }
 
-    return NextResponse.json({ 
-      ok: true, 
+    return NextResponse.json({
+      ok: true,
       action: "bot_replied",
-      extractedData 
+      sendStatus,
+      sendError,
+      extractedData,
     });
   } catch (error) {
     console.error("Webhook Evolution error:", error);
