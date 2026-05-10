@@ -58,79 +58,108 @@ interface LeadsKanbanProps {
   initialHasMore?: boolean;
 }
 
+// Funil Pneuzero — etapas mapeadas para LeadStatus existentes (sem migration).
 const COLUMNS = [
   {
     id: "NOVO",
-    title: "Novo",
+    title: "🆕 Novo Lead",
     bgColor: "bg-red-50",
     headerBg: "bg-red-100",
     borderColor: "border-red-200",
-    badgeColor: "bg-red-600"
+    badgeColor: "bg-red-600",
   },
   {
     id: "EM_ATENDIMENTO",
-    title: "Em Atendimento",
+    title: "🔍 Em Triagem",
     bgColor: "bg-orange-50",
     headerBg: "bg-orange-100",
     borderColor: "border-orange-200",
-    badgeColor: "bg-orange-500"
+    badgeColor: "bg-orange-500",
   },
   {
     id: "CONSCIENTIZADO",
-    title: "Conscientizado",
-    bgColor: "bg-cyan-50",
-    headerBg: "bg-cyan-100",
-    borderColor: "border-cyan-200",
-    badgeColor: "bg-cyan-500"
+    title: "📋 Cotação Enviada",
+    bgColor: "bg-amber-50",
+    headerBg: "bg-amber-100",
+    borderColor: "border-amber-200",
+    badgeColor: "bg-amber-500",
   },
   {
     id: "QUALIFICADO",
-    title: "Qualificado",
+    title: "🎯 Quer Agendar",
     bgColor: "bg-blue-50",
     headerBg: "bg-blue-100",
     borderColor: "border-blue-200",
-    badgeColor: "bg-blue-500"
+    badgeColor: "bg-blue-500",
   },
   {
-    id: "FECHADO",
-    title: "Fechado",
-    bgColor: "bg-green-50",
-    headerBg: "bg-green-100",
-    borderColor: "border-green-200",
-    badgeColor: "bg-green-500"
+    id: "EM_NEGOCIACAO",
+    title: "💬 Negociando",
+    bgColor: "bg-indigo-50",
+    headerBg: "bg-indigo-100",
+    borderColor: "border-indigo-200",
+    badgeColor: "bg-indigo-500",
   },
   {
-    id: "PERDIDO",
-    title: "Perdido",
-    bgColor: "bg-red-50",
-    headerBg: "bg-red-100",
-    borderColor: "border-red-200",
-    badgeColor: "bg-red-500"
-  },
-  {
-    id: "LEAD_FRIO",
-    title: "Lead Frio",
-    bgColor: "bg-slate-50",
-    headerBg: "bg-slate-100",
-    borderColor: "border-slate-200",
-    badgeColor: "bg-slate-500"
+    id: "AGUARDANDO_RESPOSTA",
+    title: "⏳ Aguardando Resposta",
+    bgColor: "bg-purple-50",
+    headerBg: "bg-purple-100",
+    borderColor: "border-purple-200",
+    badgeColor: "bg-purple-500",
   },
   {
     id: "HUMANO_SOLICITADO",
-    title: "Aguardando Humano",
+    title: "🙋 Aguardando Atendente",
     bgColor: "bg-yellow-50",
     headerBg: "bg-yellow-100",
     borderColor: "border-yellow-200",
-    badgeColor: "bg-yellow-500"
+    badgeColor: "bg-yellow-500",
+  },
+  {
+    id: "HUMANO_EM_ATENDIMENTO",
+    title: "👤 Em Atendimento Humano",
+    bgColor: "bg-teal-50",
+    headerBg: "bg-teal-100",
+    borderColor: "border-teal-200",
+    badgeColor: "bg-teal-500",
+  },
+  {
+    id: "FECHADO",
+    title: "✅ Fechado / Agendado",
+    bgColor: "bg-green-50",
+    headerBg: "bg-green-100",
+    borderColor: "border-green-200",
+    badgeColor: "bg-green-500",
+  },
+  {
+    id: "LEAD_FRIO",
+    title: "🥶 Lead Frio",
+    bgColor: "bg-slate-50",
+    headerBg: "bg-slate-100",
+    borderColor: "border-slate-200",
+    badgeColor: "bg-slate-500",
+  },
+  {
+    id: "PERDIDO",
+    title: "❌ Perdido",
+    bgColor: "bg-rose-50",
+    headerBg: "bg-rose-100",
+    borderColor: "border-rose-200",
+    badgeColor: "bg-rose-500",
   },
 ];
 
 const CATEGORIES = [
   { id: "todos", label: "Todos" },
   { id: "geral", label: "Geral" },
-  { id: "rotina", label: "Cliente Rotina" },
-  { id: "especializado", label: "Cliente Especializado" },
-  { id: "cobertura_total", label: "Cliente Cobertura Total" },
+  { id: "pneus", label: "🛞 Pneus" },
+  { id: "alinhamento", label: "⚙️ Alinhamento/Balanc." },
+  { id: "suspensao", label: "🔧 Suspensão" },
+  { id: "freios", label: "🛑 Freios" },
+  { id: "oleo", label: "🛢️ Óleo & Filtros" },
+  { id: "eletrica", label: "🔋 Elétrica/Bateria" },
+  { id: "revisao", label: "🔍 Revisão Completa" },
 ];
 
 const POLLING_INTERVAL = 60000; // 60 segundos
@@ -789,9 +818,13 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none text-sm"
                 >
                   <option value="geral">Geral</option>
-                  <option value="rotina">Cliente Rotina</option>
-                  <option value="especializado">Cliente Especializado</option>
-                  <option value="cobertura_total">Cliente Cobertura Total</option>
+                  <option value="pneus">🛞 Pneus</option>
+                  <option value="alinhamento">⚙️ Alinhamento/Balanceamento</option>
+                  <option value="suspensao">🔧 Suspensão</option>
+                  <option value="freios">🛑 Freios</option>
+                  <option value="oleo">🛢️ Óleo & Filtros</option>
+                  <option value="eletrica">🔋 Elétrica/Bateria</option>
+                  <option value="revisao">🔍 Revisão Completa</option>
                 </select>
               </div>
               <div>

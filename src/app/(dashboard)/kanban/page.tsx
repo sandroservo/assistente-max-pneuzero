@@ -42,9 +42,9 @@ export default async function KanbanPage() {
   return (
     <div className="p-4 pt-14 md:p-6 md:pt-6 space-y-4 md:space-y-6 h-full">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold text-gray-800">Tarefas</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">Funil de Vendas — Pneuzero</h1>
         <p className="text-gray-500">
-          Gerencie seus leads no formato Kanban
+          Acompanhe cada lead do primeiro contato até o serviço executado.
         </p>
       </div>
 

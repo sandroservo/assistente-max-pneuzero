@@ -1,185 +1,208 @@
-# Critérios de Movimentação do Kanban - Assistente Max
+# Critérios de Movimentação do Kanban — Assistente Max (Pneuzero)
 
-> **Autor:** Sandro Servo  
-> **Site:** https://cloudservo.com.br  
-> **Última atualização:** 07/02/2026
+> **Autor:** Sandro Servo
+> **Site:** https://cloudservo.com.br
+> **Última atualização:** 2026-05-10
 
 ---
 
 ## Visão Geral
 
-O Kanban do Assistente Max organiza os leads em colunas por status. A movimentação acontece de **duas formas**:
+O Kanban do Assistente Max organiza os leads no funil de vendas da Pneuzero. Cada coluna representa uma etapa do atendimento, da primeira mensagem até o serviço executado. Movimentação acontece de duas formas:
 
-1. **Automática** — O Max (IA) ou o sistema detecta sinais na conversa e move o lead.
-2. **Manual** — O atendente arrasta o card no Kanban ou clica em botões de ação.
-
----
-
-## Status Disponíveis
-
-| Status | Descrição |
-|---|---|
-| `NOVO` | Lead acabou de entrar (primeira mensagem recebida) |
-| `EM_ATENDIMENTO` | Lead está conversando com o Max (bot) |
-| `QUALIFICADO` | Lead demonstrou interesse real nos planos |
-| `LEAD_FRIO` | Lead demonstrou hesitação ou pediu para pensar |
-| `PROPOSTA_ENVIADA` | Proposta/link de plano enviado ao lead |
-| `EM_NEGOCIACAO` | Lead em negociação ativa |
-| `AGUARDANDO_RESPOSTA` | Lead parou de responder (follow-ups agendados) |
-| `HUMANO_SOLICITADO` | Lead pediu para falar com atendente humano |
-| `HUMANO_EM_ATENDIMENTO` | Atendente humano assumiu a conversa |
-| `FECHADO` | Lead convertido (pagamento confirmado ou intenção de compra) |
-| `PERDIDO` | Lead desistiu ou demonstrou desinteresse |
+1. **Automática** — o Max (IA) ou o sistema detecta sinais na conversa e move o lead.
+2. **Manual** — o atendente arrasta o card no Kanban ou usa botões de ação.
 
 ---
 
-## Transições Automáticas (pelo Max / Sistema)
+## Etapas do funil
+
+| ID interno | Coluna | O que significa |
+|---|---|---|
+| `NOVO` | 🆕 Novo Lead | Lead acabou de mandar a primeira mensagem |
+| `EM_ATENDIMENTO` | 🔍 Em Triagem | Max coletando dados (medida de pneu, ano do carro, km, serviço desejado) |
+| `CONSCIENTIZADO` | 📋 Cotação Enviada | Max já passou preço com montagem/balanceamento incluso |
+| `QUALIFICADO` | 🎯 Quer Agendar | Cliente demonstrou intenção real (perguntou pagamento, "quero levar") |
+| `EM_NEGOCIACAO` | 💬 Negociando | Discutindo forma de pagamento, parcelas, possíveis descontos |
+| `AGUARDANDO_RESPOSTA` | ⏳ Aguardando Resposta | Cliente parou de responder; follow-ups agendados |
+| `HUMANO_SOLICITADO` | 🙋 Aguardando Atendente | Cliente pediu humano ou Max acionou handoff |
+| `HUMANO_EM_ATENDIMENTO` | 👤 Em Atendimento Humano | Atendente assumiu a conversa; bot não responde mais |
+| `FECHADO` | ✅ Fechado / Agendado | Cliente confirmou que vai levar o carro / pagou / agendou data |
+| `LEAD_FRIO` | 🥶 Lead Frio | Cliente hesitou ("vou pensar", "depois eu vejo") |
+| `PERDIDO` | ❌ Perdido | Cliente desistiu, escolheu concorrente ou pediu desconsiderar |
+
+---
+
+## Categorias (filtro por aba)
+
+| ID | Aba | Quando usar |
+|---|---|---|
+| `geral` | Geral | Default — sem categoria definida |
+| `pneus` | 🛞 Pneus | Compra/troca de pneu |
+| `alinhamento` | ⚙️ Alinhamento/Balanc. | Alinhamento, balanceamento, geometria 3D |
+| `suspensao` | 🔧 Suspensão | Amortecedor, mola, bucha, bieleta |
+| `freios` | 🛑 Freios | Pastilha, disco, lona, fluido |
+| `oleo` | 🛢️ Óleo & Filtros | Troca de óleo, filtro de óleo/ar/combustível |
+| `eletrica` | 🔋 Elétrica/Bateria | Bateria, alternador, parte elétrica |
+| `revisao` | 🔍 Revisão Completa | Checklist + múltiplos serviços |
+
+---
+
+## Transições Automáticas (Max / Sistema)
 
 ### 1. NOVO → EM_ATENDIMENTO
 
-- **Quando:** O lead troca **2 ou mais mensagens** com o Max, sem demonstrar interesse qualificado.
-- **Lógica:** Se o lead está como `NOVO` e já tem 2+ mensagens no histórico, é movido para `EM_ATENDIMENTO`.
-- **Objetivo:** Diferenciar leads que apenas mandaram a primeira mensagem dos que já estão interagindo.
+- **Quando:** Lead trocou ≥ 2 mensagens com o Max e ainda não demonstrou intenção clara de comprar.
+- **Objetivo:** Diferenciar quem só mandou "oi" de quem está conversando de verdade.
 
-### 2. NOVO / EM_ATENDIMENTO → QUALIFICADO
+### 2. NOVO / EM_ATENDIMENTO → CONSCIENTIZADO
 
-- **Quando:** O lead demonstra **interesse real** nos planos ou serviços.
+- **Quando:** Max chamou as tools `buscar_pneu` ou `buscar_servico` e respondeu com preço.
+- **Sinal complementar:** Cliente já passou medida do pneu OU ano do veículo + serviço desejado.
+
+### 3. CONSCIENTIZADO → QUALIFICADO
+
+- **Quando:** Lead demonstra intenção concreta de fechar.
 - **Palavras-chave detectadas:**
-  - "quanto custa", "qual o valor", "qual o preço"
-  - "como funciona", "me explica", "pode me explicar"
-  - "tenho interesse", "quero saber mais", "me conta mais"
-  - "gostei", "interessante", "parece bom"
-  - "quais são os planos", "me fala dos planos"
-  - "tem desconto", "formas de pagamento", "como pago"
-  - "quero assinar", "quero contratar"
-- **Condição:** O lead precisa ter pelo menos 1 mensagem no histórico (se estiver como `NOVO`).
-- **Pode ser acionado a partir de:** `NOVO`, `EM_ATENDIMENTO`, `PROPOSTA_ENVIADA`, `EM_NEGOCIACAO`, `AGUARDANDO_RESPOSTA`.
+  - "quero levar o carro", "pode agendar", "quero fechar", "vou levar"
+  - "como faço pra agendar", "qual o melhor dia", "tem horário pra amanhã"
+  - "vou querer", "fechado então", "pode marcar"
 
-### 3. Qualquer → LEAD_FRIO
+### 4. QUALIFICADO → EM_NEGOCIACAO
 
-- **Quando:** O lead demonstra **hesitação ou esfriamento**.
-- **Palavras-chave detectadas:**
-  - "vou pensar", "preciso pensar"
-  - "depois eu vejo", "talvez"
-  - "não agora", "mais tarde", "outro dia"
-  - "semana que vem", "mês que vem"
-  - "não é o momento", "vou analisar", "deixa eu ver"
-- **Objetivo:** Identificar leads que estão esfriando para priorizar ações de reengajamento.
+- **Quando:** Discussão de forma de pagamento ou desconto.
+- **Palavras-chave:** "pix", "cartão", "parcelado", "tem desconto", "quanto à vista", "no boleto"
 
-### 4. Qualquer → FECHADO
+### 5. EM_NEGOCIACAO → FECHADO
 
-- **Quando:** O lead demonstra **intenção clara de compra**.
-- **Palavras-chave detectadas:**
-  - "vou comprar", "quero comprar"
-  - "fechar negócio", "vou fechar", "vamos fechar"
-  - "pode mandar o pix", "manda o pix"
-  - "vou pagar", "quero pagar"
-  - "aceito", "combinado"
-  - "pode enviar", "manda o contrato"
-  - "vou assinar", "contrato assinado"
-  - "pagamento feito", "já paguei", "paguei agora"
+- **Quando:** Cliente confirma compra/agendamento.
+- **Palavras-chave:**
+  - "fechado", "combinado", "pode mandar"
+  - "vou pagar", "vou levar amanhã", "tô indo agora"
+  - "pague aqui", "fiz o pix", "paguei"
 
-### 5. Qualquer → PERDIDO
+### 6. Qualquer → LEAD_FRIO
 
-- **Quando:** O lead demonstra **desistência ou desinteresse**.
-- **Palavras-chave detectadas:**
-  - "não tenho interesse", "não quero", "não preciso"
-  - "desisto", "deixa pra lá", "esquece"
-  - "não é pra mim", "muito caro", "sem condições"
-  - "não posso pagar"
-  - "já comprei em outro lugar", "já tenho"
-  - "não me interessa"
+- **Quando:** Cliente demonstra hesitação ou esfriamento.
+- **Palavras-chave:**
+  - "vou pensar", "preciso pensar", "depois eu vejo"
+  - "talvez", "não agora", "mais tarde", "outro dia"
+  - "semana que vem", "mês que vem", "deixa eu ver"
+- **Objetivo:** Priorizar reativação via follow-up.
 
-### 6. Qualquer → HUMANO_SOLICITADO
+### 7. Qualquer → PERDIDO
 
-- **Quando:** O lead pede para **falar com um atendente humano**.
-- **Palavras-chave detectadas:**
-  - "atendente", "humano", "pessoa real"
-  - "falar com alguém", "quero falar", "preciso falar"
-  - "gerente", "reclamação", "cancelar"
-- **Ação automática:** O Max avisa o lead que será transferido e muda o `ownerType` para `human` (o bot para de responder).
+- **Quando:** Cliente desiste ou escolhe concorrente.
+- **Palavras-chave:**
+  - "não tenho interesse", "não quero", "não preciso", "desisto"
+  - "muito caro", "sem condições", "tá fora do meu orçamento"
+  - "já comprei em outro lugar", "já fiz em outra borracharia"
+  - "deixa pra lá", "esquece"
 
----
+### 8. Qualquer → HUMANO_SOLICITADO
 
-## Transições por Ação do Atendente
-
-### 7. Qualquer → HUMANO_EM_ATENDIMENTO
-
-- **Gatilho:** O atendente clica em **"Iniciar atendimento"** no painel, ou envia mensagem diretamente pelo WhatsApp.
-- **Efeito:** O bot para de responder. O lead recebe uma mensagem informando o nome do atendente que vai atendê-lo.
-
-### 8. HUMANO_EM_ATENDIMENTO → EM_ATENDIMENTO
-
-- **Gatilho:** O atendente clica em **"Devolver para Max (Bot)"**.
-- **Efeito:** O Max volta a responder automaticamente as mensagens do lead.
+- **Quando:** Cliente pede atendente humano OU Max chama a tool `transferir_humano`.
+- **Palavras-chave:**
+  - "quero falar com atendente", "humano", "pessoa real"
+  - "gerente", "reclamação", "falar com alguém"
+- **Ação:** `Lead.status = HUMANO_SOLICITADO`, `ownerType = human`. Bot para de responder.
 
 ### 9. Qualquer → AGUARDANDO_RESPOSTA
 
-- **Gatilho:** O atendente clica em **"Cliente parou de responder"**.
-- **Efeito:** Agenda **4 follow-ups automáticos** que o Max envia:
-  - **24h:** "Oi! Só passando pra ver se você conseguiu pensar sobre os planos do Amo Vidas 🙂"
-  - **48h:** "Oi! Ainda faz sentido conversarmos sobre o clube de benefícios? Estou aqui pra te ajudar!"
-  - **72h:** "Se precisar de ajuda pra escolher o melhor plano, é só me chamar! 😊"
-  - **120h:** "Última mensagem por aqui! Se quiser retomar depois, é só me chamar. Cuide-se! 🌟"
-
-### 10. Drag & Drop no Kanban
-
-- **Gatilho:** O atendente **arrasta o card** de uma coluna para outra no Kanban.
-- **Efeito:** Atualiza o status do lead para o da coluna de destino. Aceita todos os status válidos.
+- **Quando:** Lead já em `EM_ATENDIMENTO` ou `CONSCIENTIZADO` há > 24h sem responder.
+- **Ação:** Cron de follow-up agenda mensagens (`lead_frio_3d`, `lead_frio_15d`).
 
 ---
 
-## Transições por Integração (Asaas - Pagamentos)
+## Transições por ação do atendente
 
-### 11. Qualquer → FECHADO (Pagamento Confirmado)
+### 10. Qualquer → HUMANO_EM_ATENDIMENTO
 
-- **Gatilho:** Webhook do Asaas recebe evento `PAYMENT_CONFIRMED` ou `PAYMENT_RECEIVED`.
-- **Efeito:** Lead é marcado como `FECHADO` e recebe mensagem de confirmação no WhatsApp.
+- **Gatilho:** Atendente clica "Iniciar atendimento" no painel OU envia mensagem direto pelo WhatsApp da loja (Evolution detecta `fromMe`).
+- **Efeito:** Bot para. Atendente que pegou vira `vendedor` responsável de qualquer venda nascida nesta conversa.
 
-### 12. FECHADO → QUALIFICADO (Pagamento Vencido)
+### 11. HUMANO_EM_ATENDIMENTO → EM_ATENDIMENTO
 
-- **Gatilho:** Webhook do Asaas recebe evento `PAYMENT_OVERDUE`.
-- **Efeito:** Lead volta para `QUALIFICADO` (pode precisar de reengajamento) e recebe lembrete de pagamento.
+- **Gatilho:** Atendente clica "Devolver para Max (Bot)".
+- **Efeito:** Max volta a responder.
+
+### 12. Drag & drop no Kanban
+
+- **Gatilho:** Atendente arrasta card para outra coluna.
+- **Efeito:** `Lead.status` atualiza pra coluna destino. Aceita qualquer transição (override manual).
 
 ---
 
-## Fluxo Visual do Funil
+## Transições por integração (futuro)
+
+| Evento | Resultado |
+|---|---|
+| `Sale.status = CONCLUIDA` | Lead permanece `FECHADO`. Cron agenda `nps_d1` (pesquisa pós-venda) |
+| `NPSResponse.categoria = detrator` | Cria `Handoff` automático para gerência. Lead vira `HUMANO_SOLICITADO` |
+| `Lead.followUpOptOut = true` | Sai de qualquer fluxo de follow-up automático |
+
+---
+
+## Fluxo visual
 
 ```
-                    ┌─────────────────────────────────────┐
-                    │              NOVO                    │
-                    │  (Lead mandou primeira mensagem)     │
-                    └──────────────┬──────────────────────┘
-                                   │
-                          2+ mensagens
-                                   │
-                    ┌──────────────▼──────────────────────┐
-                    │         EM_ATENDIMENTO               │
-                    │  (Conversando com o Max)             │
-                    └──┬───────┬───────┬──────┬───────┬───┘
-                       │       │       │      │       │
-                  interesse  hesitou  pediu  desistiu  parou
-                       │       │     humano    │    responder
-                       ▼       ▼       ▼       ▼       ▼
-                 QUALIFICADO  LEAD   HUMANO  PERDIDO  AGUARDANDO
-                       │      FRIO  SOLICITADO         RESPOSTA
-                       │               │
-                  comprou/pagou    atendente
-                       │           assumiu
-                       ▼               ▼
-                    FECHADO    HUMANO_EM_ATENDIMENTO
+┌───────────────────┐
+│   🆕 Novo Lead     │  primeira msg
+└─────────┬─────────┘
+          │ ≥2 msgs
+          ▼
+┌───────────────────┐
+│  🔍 Em Triagem    │  Max coleta medida pneu, ano, km
+└─────────┬─────────┘
+          │ Max cotou
+          ▼
+┌───────────────────┐
+│ 📋 Cotação Enviada │  preço com montagem/balanc. inclusos
+└─────────┬─────────┘
+          │ "quero agendar"
+          ▼
+┌───────────────────┐
+│  🎯 Quer Agendar  │
+└─────────┬─────────┘
+          │ "qual a forma de pagamento"
+          ▼
+┌───────────────────┐
+│   💬 Negociando   │  pix, cartão, parcelado
+└─────────┬─────────┘
+          │ "fechado, vou levar"
+          ▼
+┌───────────────────┐
+│ ✅ Fechado / Agendado │
+└───────────────────┘
+
+Em paralelo a qualquer etapa:
+  ⏳ Aguardando Resposta   (sem resposta > 24h)
+  🥶 Lead Frio              ("vou pensar")
+  ❌ Perdido                ("não quero", "muito caro")
+  🙋 Aguardando Atendente   (lead pediu humano)
+  👤 Em Atendimento Humano  (atendente assumiu)
 ```
 
 ---
 
-## Observações Importantes
+## Observações importantes
 
-1. **Prioridade de detecção:** PERDIDO > FECHADO > QUALIFICADO > EM_ATENDIMENTO > LEAD_FRIO. Ou seja, se o lead diz "não quero" e "quanto custa" na mesma mensagem, prevalece `PERDIDO`.
+1. **Prioridade de detecção:** PERDIDO > FECHADO > QUALIFICADO > LEAD_FRIO > EM_ATENDIMENTO. Se o lead diz "não quero" e "quanto custa" na mesma mensagem, prevalece `PERDIDO`.
 
-2. **Status protegido:** O lead **não regride** de `FECHADO` automaticamente (exceto por `PAYMENT_OVERDUE` do Asaas). A detecção automática só move para `QUALIFICADO` se o status atual **não for** `FECHADO`.
+2. **Status protegido:** Lead **não regride automaticamente** de `FECHADO`. Detecção automática só promove para `QUALIFICADO` se o status atual **não for** `FECHADO`.
 
-3. **Detecção por mensagem atual:** As keywords de `PERDIDO`, `FECHADO` e `LEAD_FRIO` são verificadas **apenas na mensagem atual** do lead. Já `QUALIFICADO` verifica no **histórico completo** da conversa.
+3. **Detecção contextual:** Keywords de `PERDIDO`, `FECHADO`, `LEAD_FRIO` são verificadas **na mensagem atual**. Já `QUALIFICADO`/`CONSCIENTIZADO` consideram o histórico (sinais acumulados + uso de tools).
 
-4. **Follow-ups:** Os follow-ups são executados por um **cron job a cada 15 minutos** que verifica follow-ups pendentes com data vencida.
+4. **Follow-ups automáticos:** Cron `*/10 * * * *` (`scripts/run-followups.ts`) processa `FollowUp` pendente. Anti-spam: pula se cliente respondeu nas últimas 24h.
 
-5. **Handoff (transferência):** Quando um atendente envia mensagem diretamente pelo WhatsApp (sem usar o painel), o sistema automaticamente assume que o humano tomou o controle e move o lead para `HUMANO_EM_ATENDIMENTO`.
+5. **Handoff por mensagem direta:** Se um atendente envia mensagem pelo WhatsApp da loja (sem usar o painel), o webhook detecta `fromMe`, marca `ownerType = human` e move pra `HUMANO_EM_ATENDIMENTO`.
+
+6. **NPS pós-venda:** Após `Sale.status = CONCLUIDA`, cron agenda mensagem D+1 às 14h pedindo nota 0-10. Detrator (≤6) dispara handoff para gerência.
+
+---
+
+## Arquivo da UI
+
+[`src/app/(dashboard)/leads/ui/LeadsKanban.tsx`](../src/app/(dashboard)/leads/ui/LeadsKanban.tsx) — constantes `COLUMNS` (etapas) e `CATEGORIES` (abas).
+
+Detecção de status fica em [`src/lib/ai.ts`](../src/lib/ai.ts), função `detectLeadStatus()`.
