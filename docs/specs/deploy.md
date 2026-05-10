@@ -88,20 +88,35 @@ Seguir o padrão do servidor:
 /etc/nginx/sites-enabled/assistente-max -> ../sites-available/assistente-max
 ```
 
-### Variáveis do `.env` em produção
+### Política de credenciais
+
+`.env` carrega APENAS infra (DB + auth). Credenciais de APIs externas
+(OpenAI, Evolution, etc.) ficam na **tabela `Settings`** no banco e são
+editáveis pela UI em `/settings`.
+
+`/etc/assistente-max/.env` (chmod 640, root:assistente-max):
 
 ```env
 NODE_ENV=production
+PORT=3004
 DATABASE_URL=postgresql://assistente_max:<senha>@localhost:5432/assistente_max?schema=public
-OPENAI_API_KEY=sk-...                     # ★ pendente do dono
-EVOLUTION_BASE_URL=https://...            # ★ pendente do dono
-EVOLUTION_INSTANCE=pneuzero
-EVOLUTION_TOKEN=...                        # ★ pendente do dono
-NEXTAUTH_SECRET=$(openssl rand -hex 32)
-NEXTAUTH_URL=https://<subdomínio-decidido>
+AUTH_SECRET=<openssl rand -hex 32>
+AUTH_URL=https://pneuzero.cloudservo.com.br
+NEXTAUTH_URL=https://pneuzero.cloudservo.com.br
 ```
 
-★ = decisão/credencial pendente do dono.
+Tabela `Settings` (gerenciada via UI):
+
+| key | encrypted | descrição |
+|-----|-----------|-----------|
+| `evolution_base_url` | não | URL Evolution API |
+| `evolution_instance` | não | Nome da instância |
+| `evolution_token` | sim | Token API |
+| `webhook_secret` | sim | Secret HMAC do webhook |
+| `openai_api_key` | sim | Chave OpenAI |
+| `openai_model` | não | Modelo (default `gpt-4o-mini`) |
+| `system_prompt` | não | Prompt do Max |
+| `app_url` | não | URL pública |
 
 ## Status: 🟢 DEPLOY EM PRODUÇÃO
 
