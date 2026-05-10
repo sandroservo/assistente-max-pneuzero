@@ -10,7 +10,6 @@ import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
 import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
 import { getAllMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
-import { listarClientesVencidos, hasCobrancaToken } from "./amovidas-api";
 
 async function getOpenAIClient() {
   const settings = await getSystemSettings();
@@ -64,7 +63,7 @@ function getPeriodoDoDia(): { periodo: string; saudacao: string; horaFormatada: 
   return { periodo: "noite", saudacao: "Boa noite", horaFormatada };
 }
 
-const DEFAULT_SYSTEM_PROMPT = `Você é o Max, consultor da Pneu Zero. Você fala por WhatsApp com leads que podem virar clientes.
+const DEFAULT_SYSTEM_PROMPT = `Você é o Max, consultor da Pneu Zero. Você fala por WhatsApp com leads sobre serviços automotivos EXCLUSIVAMENTE da Pneu Zero.
 
 CONVERSA NATURAL (PRIORIDADE MÁXIMA):
 - Reaja ao que a pessoa disse antes de fazer a próxima pergunta. Nunca ignore a mensagem dela e pule direto para uma pergunta de script.
@@ -86,6 +85,12 @@ REGRAS DE CONTEÚDO:
 - Respostas curtas (3–4 frases). Uma pergunta por vez quando for perguntar.
 - Se pedir atendente humano, confirme que vai transferir. Se não souber o nome, pergunte de forma natural.
 
+FOCO APENAS EM SERVIÇOS DA PNEU ZERO:
+- Discuta SOMENTE pneus, alinhamento, balanceamento, suspensão, freios, óleo, elétrica, baterias e checklists automotivos.
+- NÃO responda piadas. NÃO dê conselhos sobre família, relacionamentos ou qualquer assunto pessoal.
+- Se o lead perguntar sobre algo fora do escopo (piadas, vida pessoal, etc.), redirecione educadamente: "Sou especialista em serviços automotivos da Pneu Zero. Posso te ajudar com pneus, alinhamento, freios ou outro serviço para seu carro?"
+- Mantenha o foco total em ajudar com as necessidades do veículo do cliente.
+
 ROTEIRO DE ATENDIMENTO (fluxo natural, NÃO como script rígido):
 Siga a base de conhecimento (Tool Information) para conduzir o atendimento. A ordem geral é:
 1. COMPOSIÇÃO — Pergunte quantos pneus vai trocar e se quer alinhar/balancear
@@ -102,6 +107,7 @@ REGRA DE OURO:
 - Pergunta boa vale mais que resposta rápida
 - Seja consultivo e amigável, como um consultor de confiança
 - Aqui na Pneu Zero o cliente resolve tudo em um só lugar: pneus, alinhamento, suspensão, freios, óleo, elétrica e baterias
+- FOCO TOTAL EM SERVIÇOS AUTOMOTIVOS — nada de assuntos pessoais ou entretenimento
 
 HANDOFF — Transfira para humano quando:
 - Lead pede valores exatos que você não tem na base
@@ -128,7 +134,10 @@ export async function generateAIResponse(
     const systemPrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
     // Base de conhecimento única (single-tenant): busca toda a base, sem filtro de organização.
-    const isFirstMessage = context.messageHistory.length === 0;
+    // A mensagem do lead já foi salva no banco antes de chegar aqui,
+    // então primeira mensagem = só 1 msg "in" e nenhuma "out" no histórico.
+    const outMessages = context.messageHistory.filter(m => m.direction === "out");
+    const isFirstMessage = outMessages.length === 0;
 
     let knowledge: Awaited<ReturnType<typeof getAllKnowledge>>;
     if (isFirstMessage) {
@@ -142,40 +151,7 @@ export async function generateAIResponse(
       baseKnowledge.forEach((k) => byId.set(k.id, k));
       knowledge = Array.from(byId.values());
     }
-    let toolInformation = formatKnowledgeForAI(knowledge);
-
-    // Se a mensagem menciona cobrança/vencidos e temos token, busca dados em tempo real
-    const cobrancaKeywords = [
-      "vencidos", "em atraso", "cobrança", "cobrancas", "inadimplentes",
-      "quem deve", "clientes vencidos", "faturas vencidas", "pagamentos atrasados",
-      "lista de vencidos", "quantos vencidos",
-    ];
-    const msgLower = userMessage.toLowerCase();
-    const isCobrancaQuery = cobrancaKeywords.some((k) => msgLower.includes(k));
-    if (isCobrancaQuery && hasCobrancaToken()) {
-      const cobrancaData = await listarClientesVencidos();
-      if (cobrancaData.ok && cobrancaData.clients && cobrancaData.clients.length >= 0) {
-        const cobrancaBlock = [
-          "<Tool Information>",
-          "## Cobranças vencidas (dados em tempo real do sistema)",
-          `Total de clientes com cobrança em atraso: ${cobrancaData.total ?? cobrancaData.clients.length}`,
-          "",
-          cobrancaData.clients.length > 0
-            ? cobrancaData.clients
-                .slice(0, 20)
-                .map(
-                  (c) =>
-                    `- ${c.customerName}: R$ ${c.value.toFixed(2)}, ${c.daysOverdue} dias em atraso (vencimento: ${c.dueDate})`
-                )
-                .join("\n")
-            : "Nenhum cliente com cobrança vencida no momento.",
-          "</Tool Information>",
-        ].join("\n");
-        toolInformation = toolInformation
-          ? `${toolInformation}\n\n${cobrancaBlock}`
-          : cobrancaBlock;
-      }
-    }
+    const toolInformation = formatKnowledgeForAI(knowledge);
 
     // Busca memórias do lead
     const leadMemories = await getAllMemories(context.leadId);
@@ -210,11 +186,11 @@ export async function generateAIResponse(
       { role: "system", content: systemPrompt },
     ];
 
-    // Adiciona Tool Information (base de conhecimento) — o Max DEVE consultar para planos, parceiros, preços, etc.
+    // Adiciona Tool Information (base de conhecimento) — Max DEVE consultar para serviços, pneus, preços, garantias, endereços.
     if (toolInformation) {
       messages.push({
         role: "system",
-        content: `${toolInformation}\n\nIMPORTANTE: Use o bloco <Tool Information> acima para responder perguntas sobre planos, preços, parceiros do Clube de Desconto, benefícios, links e regras. Consulte sempre essa base antes de responder.`,
+        content: `${toolInformation}\n\nIMPORTANTE: Use o bloco <Tool Information> acima para responder sobre pneus, serviços, preços, garantias, endereços e regras da Pneuzero. Consulte sempre essa base antes de responder.`,
       });
     }
 
@@ -234,10 +210,15 @@ export async function generateAIResponse(
     });
 
     // Adiciona contexto do lead (usa isFirstMessage já definida acima)
-    if (isFirstMessage) {
+    if (isFirstMessage && context.leadName) {
       messages.push({
         role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou o Max, da Pneuzero �") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
+        content: `Esta é a PRIMEIRA mensagem do cliente. O nome dele é ${context.leadName} (do perfil WhatsApp). Apresente-se de forma breve e calorosa usando o nome dele (ex.: "${saudacao}, ${context.leadName}! Sou o Max, da Pneu Zero 🔴 Em que posso te ajudar?"). NÃO pergunte o nome, pois já sabe. Seja natural como no WhatsApp.`,
+      });
+    } else if (isFirstMessage) {
+      messages.push({
+        role: "system",
+        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou o Max, da Pneu Zero 🔴") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
       });
     } else if (context.leadName) {
       messages.push({
@@ -484,23 +465,31 @@ function generateFallbackResponse(text: string, leadName?: string | null): strin
     return `Olá! 👋 Eu sou o Max, da Pneuzero. Como posso te chamar?`;
   }
 
-  if (t.includes("plano") || t.includes("valor") || t.includes("preço")) {
-    return `${greeting ? greeting + ", t" : "T"}emos 3 planos: Essencial (R$ 37,90), Completo (R$ 59,90) e Premium (R$ 99,90). O foco é cuidado de rotina ou exames mais específicos?`;
+  if (t.includes("pneu") || t.includes("medida")) {
+    return `${greeting ? greeting + ", b" : "B"}eleza, vamos ver direitinho. Me passa a medida do pneu (ex.: 175/70R13) ou o ano e modelo do carro que eu confiro pra você.`;
+  }
+
+  if (t.includes("alinhamento") || t.includes("balanceamento") || t.includes("rodízio") || t.includes("rodizio")) {
+    return `${greeting ? greeting + ", b" : "B"}om saber. Me conta o ano do veículo e quantos km já rodou, que aí eu te oriento certinho.`;
+  }
+
+  if (t.includes("preço") || t.includes("preco") || t.includes("valor") || t.includes("quanto")) {
+    return `Pra te passar o valor certinho preciso de um detalhe a mais. Pode me dizer a medida do pneu ou o modelo/ano do carro?`;
   }
 
   if (t.includes("pneu zero") || t.includes("pneuzero") || t.includes("o que é")) {
-    return `A Pneu Zero é uma loja especializada em pneus e serviços automotivos. ${greeting ? greeting + ", v" : "V"}ocê precisa de pneus, alinhamento ou algum outro serviço?`;
+    return `A Pneuzero é especializada em pneus e serviços automotivos: alinhamento, balanceamento, suspensão, freios, óleo, elétrica e baterias. ${greeting ? greeting + ", o" : "O"} que você precisa pro seu carro?`;
   }
 
   if (t.includes("obrigado") || t.includes("obrigada") || t.includes("valeu")) {
-    return `Imagina${greeting ? ", " + greeting : ""}! 😊 Se precisar de mais alguma coisa, é só chamar. Tenha um ótimo dia! 🌟`;
+    return `Imagina${greeting ? ", " + greeting : ""}! 😊 Qualquer coisa é só chamar. Boa estrada! 🚗`;
   }
 
   if (!leadName) {
     return `Olá! Sou o Max, da Pneuzero. Antes de continuar, como posso te chamar? 😊`;
   }
 
-  return `${greeting}, entendi! Me conta mais sobre o que você precisa que eu te ajudo. Se preferir falar com uma pessoa, é só me avisar! 😊`;
+  return `${greeting}, entendi! Me conta um pouco mais do que o carro tá precisando que eu te ajudo. Se preferir falar com um atendente, é só avisar! 🛠️`;
 }
 
 export function shouldTransferToHuman(text: string): boolean {

@@ -11,19 +11,19 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const CONTACTS = [
-  {
-    name: "Amo Vidas - Atendimento",
-    phone: "5511999999999",
-    organization: "Amo Vidas Clube de Saúde",
-    category: "empresa",
-  },
-  // Adicione mais contatos de clínicas aqui conforme necessário:
+const CONTACTS: {
+  name: string;
+  phone: string;
+  organization?: string;
+  category?: string;
+}[] = [
+  // Adicione contatos institucionais da Pneuzero ou parceiros para envio via vCard.
+  // Exemplo:
   // {
-  //   name: "Clínica São Lucas",
-  //   phone: "5511888888888",
-  //   organization: "Clínica São Lucas",
-  //   category: "clinica",
+  //   name: "Pneuzero - Atendimento",
+  //   phone: "5598999999999",
+  //   organization: "Pneuzero Maranhão",
+  //   category: "empresa",
   // },
 ];
 
