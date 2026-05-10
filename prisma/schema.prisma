@@ -51,6 +51,9 @@ model Organization {
   settings         OrgSettings[]
   excludedContacts ExcludedContact[]
   tags             Tag[]
+  quotes           Quote[]
+  sales            Sale[]
+  followUpRules    FollowUpRule[]
 }
 
 model User {
@@ -66,9 +69,11 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  handoffs     Handoff[]    @relation("AssignedTo")
-  sentMessages Message[]    @relation("SentByUser")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  handoffs       Handoff[]    @relation("AssignedTo")
+  sentMessages   Message[]    @relation("SentByUser")
+  vendedorQuotes Quote[]      @relation("VendedorQuote")
+  vendedorSales  Sale[]       @relation("VendedorSale")
 
   @@index([organizationId])
   @@index([email])
@@ -175,12 +180,19 @@ model Lead {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
+  cpf             String?  // Opcional, para nota fiscal
+  followUpOptOut  Boolean  @default(false) // Lead pediu para não receber follow-up
+
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   conversations Conversation[]
   followUps     FollowUp[]
   handoffs      Handoff[]
   memories      LeadMemory[]
   tags          Tag[]
+  vehicles      Vehicle[]
+  quotes        Quote[]
+  sales         Sale[]
+  nps           NPSResponse[]
 
   @@unique([organizationId, phone]) // Phone único por organização
   @@index([organizationId])
@@ -269,13 +281,26 @@ model FollowUp {
   scheduledAt    DateTime
   status         String   @default("pending")
   lastError      String?
+  type           String?  // nps_d1, alinhamento_3m, rodizio_6m, troca_oleo_km, aniversario, lead_frio_3d, garantia_vencendo
+  vehicleId      String?
+  saleId         String?
+  serviceLogId   String?
+  ruleId         String?
+  template       String?  @db.Text // snapshot do template usado
+  sentAt         DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lead         Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle?      @relation(fields: [vehicleId], references: [id])
+  sale         Sale?         @relation(fields: [saleId], references: [id])
+  serviceLog   ServiceLog?   @relation(fields: [serviceLogId], references: [id])
+  rule         FollowUpRule? @relation(fields: [ruleId], references: [id])
 
   @@index([status, scheduledAt])
+  @@index([type])
+  @@index([leadId])
 }
 
 model Handoff {
@@ -355,4 +380,242 @@ model AsaasWebhookLog {
 
   @@index([event])
   @@index([createdAt])
+}
+
+// ==========================================
+// VEÍCULO, CATÁLOGO, COTAÇÃO, VENDA (Fase 2)
+// ==========================================
+
+model Vehicle {
+  id                      String   @id @default(cuid())
+  leadId                  String
+  placa                   String?  // AAA1A23 (Mercosul) ou AAA1234
+  marca                   String?
+  modelo                  String?
+  ano                     Int?
+  cor                     String?
+  medidaPneu              String?  // ex: 175/70R13
+  kmAtual                 Int?
+  kmEstimadoMes           Int?     // para calcular próxima troca de óleo
+  ultimaTrocaOleoKm       Int?
+  ultimaTrocaOleoData     DateTime?
+  ultimoAlinhamentoData   DateTime?
+  ultimoBalanceamentoData DateTime?
+  ultimaTrocaPneusData    DateTime?
+  observacoes             String?  @db.Text
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  quotes      Quote[]
+  sales       Sale[]
+  serviceLogs ServiceLog[]
+  followUps   FollowUp[]
+
+  @@index([leadId])
+  @@index([placa])
+}
+
+model ServiceCategory {
+  id    String        @id @default(cuid())
+  nome  String        @unique // "Alinhamento", "Suspensão", "Freios", "Óleo", "Elétrica", "Bateria"
+  icone String?
+  items ServiceItem[]
+}
+
+model ServiceItem {
+  id           String   @id @default(cuid())
+  categoryId   String
+  nome         String   // "Alinhamento direção 3D"
+  descricao    String?  @db.Text
+  precoBase    Decimal? @db.Decimal(10, 2)
+  garantiaDias Int?
+  duracaoMin   Int?
+  ativo        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category   ServiceCategory @relation(fields: [categoryId], references: [id])
+  quoteItems QuoteItem[]
+
+  @@index([categoryId])
+  @@index([ativo])
+}
+
+model TireProduct {
+  id        String   @id @default(cuid())
+  marca     String   // Pirelli, Michelin, Goodyear, Continental
+  modelo    String   // Cinturato P1, Energy XM2
+  medida    String   // 175/70R13
+  aro       Int      // 13, 14, 15...
+  uso       String?  // passeio, SUV, caminhonete
+  preco     Decimal? @db.Decimal(10, 2)
+  estoque   Int      @default(0)
+  ativo     Boolean  @default(true)
+  imagem    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quoteItems QuoteItem[]
+
+  @@unique([marca, modelo, medida])
+  @@index([medida])
+  @@index([aro])
+  @@index([ativo])
+}
+
+enum QuoteStatus {
+  ABERTA
+  ENVIADA
+  ACEITA
+  RECUSADA
+  EXPIRADA
+  CONVERTIDA
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  organizationId  String
+  leadId          String
+  vehicleId       String?
+  conversationId  String?
+  vendedorId      String?     // User (humano) ou null se bot
+  status          QuoteStatus @default(ABERTA)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  desconto        Decimal     @default(0) @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  formaPagamento  String?     // pix, dinheiro, cartao_vista, cartao_parcelado
+  parcelas        Int?
+  observacoes     String?     @db.Text
+  validadeAte     DateTime?
+  enviadaEm       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle?     @relation(fields: [vehicleId], references: [id])
+  vendedor     User?        @relation("VendedorQuote", fields: [vendedorId], references: [id])
+  items        QuoteItem[]
+  sale         Sale?
+
+  @@index([organizationId])
+  @@index([leadId])
+  @@index([vendedorId])
+  @@index([status])
+}
+
+model QuoteItem {
+  id            String  @id @default(cuid())
+  quoteId       String
+  tipo          String  // "tire" | "service"
+  tireId        String?
+  serviceItemId String?
+  descricao     String  // snapshot (caso preço mude depois)
+  quantidade    Int     @default(1)
+  precoUnit     Decimal @db.Decimal(10, 2)
+  subtotal      Decimal @db.Decimal(10, 2)
+
+  quote       Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  tire        TireProduct? @relation(fields: [tireId], references: [id])
+  serviceItem ServiceItem? @relation(fields: [serviceItemId], references: [id])
+
+  @@index([quoteId])
+}
+
+enum SaleStatus {
+  AGENDADA
+  EM_EXECUCAO
+  CONCLUIDA
+  CANCELADA
+}
+
+model Sale {
+  id              String     @id @default(cuid())
+  organizationId  String
+  quoteId         String     @unique
+  leadId          String
+  vehicleId       String?
+  vendedorId      String     // SEMPRE preenchido — quem fechou
+  total           Decimal    @db.Decimal(10, 2)
+  formaPagamento  String
+  parcelas        Int?
+  dataFechamento  DateTime   @default(now())
+  dataServico     DateTime?  // quando vai/foi executado
+  status          SaleStatus @default(AGENDADA)
+  notaFiscal      String?
+  observacoes     String?    @db.Text
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  quote        Quote        @relation(fields: [quoteId], references: [id])
+  lead         Lead         @relation(fields: [leadId], references: [id])
+  vehicle      Vehicle?     @relation(fields: [vehicleId], references: [id])
+  vendedor     User         @relation("VendedorSale", fields: [vendedorId], references: [id])
+  serviceLogs  ServiceLog[]
+  nps          NPSResponse?
+  followUps    FollowUp[]
+
+  @@index([organizationId])
+  @@index([leadId])
+  @@index([vendedorId])
+  @@index([status])
+  @@index([dataFechamento])
+}
+
+model ServiceLog {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  saleId      String?
+  tipo        String    // "alinhamento" | "balanceamento" | "troca_oleo" | "troca_pneu" | "freios" | ...
+  descricao   String?   @db.Text
+  kmNoServico Int?
+  executadoEm DateTime  @default(now())
+  garantiaAte DateTime?
+  pecasUsadas String?   @db.Text // JSON
+  createdAt   DateTime  @default(now())
+
+  vehicle   Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  sale      Sale?      @relation(fields: [saleId], references: [id])
+  followUps FollowUp[]
+
+  @@index([vehicleId])
+  @@index([tipo])
+  @@index([executadoEm])
+}
+
+model NPSResponse {
+  id           String   @id @default(cuid())
+  saleId       String   @unique
+  leadId       String
+  nota         Int      // 0-10
+  categoria    String   // detrator | neutro | promotor
+  comentario   String?  @db.Text
+  respondidoEm DateTime @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id])
+  lead Lead @relation(fields: [leadId], references: [id])
+
+  @@index([leadId])
+  @@index([nota])
+}
+
+model FollowUpRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  tipo           String   // nps_d1, alinhamento_3m, rodizio_6m, troca_oleo_km, aniversario, lead_frio_3d, lead_frio_15d, garantia_vencendo
+  nome           String
+  ativo          Boolean  @default(true)
+  gatilho        String   @db.Text // JSON: { "evento": "sale.concluida", "delayDias": 1, "horarioEnvio": "14:00" }
+  template       String   @db.Text // pode ter {{primeiro_nome}}, {{veiculo_modelo}}, etc.
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  followUps    FollowUp[]
+
+  @@unique([organizationId, tipo])
+  @@index([organizationId])
+  @@index([tipo])
 }
