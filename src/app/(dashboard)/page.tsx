@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { MessageSquare, Users, Clock, TrendingUp } from "lucide-react";
+import { MessageSquare, Users, Clock, TrendingUp, DollarSign, Star, Bell, Car } from "lucide-react";
 import { DashboardChart } from "@/components/DashboardChart";
 
 export const dynamic = "force-dynamic";
@@ -40,17 +40,46 @@ export default async function DashboardPage() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [leadsCount, conversationsCount, pendingCount, conversationsInAttendance] =
-    await Promise.all([
-      prisma.lead.count(),
-      prisma.conversation.count(),
-      prisma.lead.count({ where: { status: "NOVO" } }),
-      prisma.conversation.findMany({
-        orderBy: { lastMessageAt: "desc" },
-        take: 8,
-        include: { lead: true },
-      }),
-    ]);
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [
+    leadsCount,
+    conversationsCount,
+    pendingCount,
+    conversationsInAttendance,
+    salesMonth,
+    vehiclesCount,
+    npsMonthAgg,
+    pendingFollowUps,
+  ] = await Promise.all([
+    prisma.lead.count(),
+    prisma.conversation.count(),
+    prisma.lead.count({ where: { status: "NOVO" } }),
+    prisma.conversation.findMany({
+      orderBy: { lastMessageAt: "desc" },
+      take: 8,
+      include: { lead: true },
+    }),
+    prisma.sale.aggregate({
+      _sum: { total: true },
+      _count: true,
+      where: { dataFechamento: { gte: startOfMonth } },
+    }),
+    prisma.vehicle.count(),
+    prisma.nPSResponse.aggregate({
+      _avg: { nota: true },
+      _count: true,
+      where: { respondidoEm: { gte: startOfMonth } },
+    }),
+    prisma.followUp.count({ where: { status: "pending" } }),
+  ]);
+
+  const totalVendasMes = Number(salesMonth._sum.total ?? 0);
+  const qtdVendasMes = salesMonth._count;
+  const npsMedioMes = npsMonthAgg._avg.nota ?? null;
+  const npsRespostas = npsMonthAgg._count;
 
   // Dados para gráficos
   const [leadsByDay, messagesByDay, leadsByStatus] = await Promise.all([
@@ -147,6 +176,37 @@ export default async function DashboardPage() {
     },
   ];
 
+  const businessStats = [
+    {
+      title: "Vendas no mês",
+      value: totalVendasMes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      subtitle: `${qtdVendasMes} venda${qtdVendasMes === 1 ? "" : "s"}`,
+      icon: DollarSign,
+      gradient: "from-green-500 to-emerald-500",
+    },
+    {
+      title: "NPS médio (mês)",
+      value: npsMedioMes === null ? "—" : npsMedioMes.toFixed(1),
+      subtitle: `${npsRespostas} resposta${npsRespostas === 1 ? "" : "s"}`,
+      icon: Star,
+      gradient: "from-yellow-500 to-amber-500",
+    },
+    {
+      title: "Follow-ups pendentes",
+      value: pendingFollowUps,
+      subtitle: "Aguardando envio",
+      icon: Bell,
+      gradient: "from-sky-500 to-blue-500",
+    },
+    {
+      title: "Veículos cadastrados",
+      value: vehiclesCount,
+      subtitle: "Frota total de clientes",
+      icon: Car,
+      gradient: "from-purple-500 to-fuchsia-500",
+    },
+  ];
+
   return (
     <div className="p-4 pt-14 md:p-6 md:pt-6 space-y-4 md:space-y-6 min-h-screen">
       <div className="flex items-center justify-between">
@@ -165,6 +225,23 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 <p className="text-sm text-gray-500">{stat.title}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {businessStats.map((stat) => (
+          <div key={stat.title} className="bg-white rounded-xl p-5 border border-gray-100">
+            <div className="flex items-start gap-3">
+              <div className={`p-2.5 rounded-lg bg-gradient-to-br ${stat.gradient}`}>
+                <stat.icon className="h-4 w-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-bold text-gray-900 truncate">{stat.value}</p>
+                <p className="text-xs text-gray-500">{stat.title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{stat.subtitle}</p>
               </div>
             </div>
           </div>
