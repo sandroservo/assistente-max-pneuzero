@@ -10,6 +10,9 @@ import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
 import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
 import { getAllMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
+import { extractVehicleData } from "./extractors";
+import { upsertVehicle, getVehiclesByLead, formatVehiclesForAI } from "./vehicle";
+import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "./tools";
 
 async function getOpenAIClient() {
   const settings = await getSystemSettings();
@@ -30,6 +33,7 @@ interface Message {
 interface ConversationContext {
   leadId: string;
   organizationId?: string | null;
+  conversationId?: string | null;
   leadName?: string | null;
   leadEmail?: string | null;
   leadCity?: string | null;
@@ -283,6 +287,23 @@ export async function generateAIResponse(
       }
     }
 
+    // Extrai dados estruturados do veículo (placa, medida pneu, km, ano) e faz upsert.
+    const vehicleData = extractVehicleData(userMessage);
+    if (Object.keys(vehicleData).length > 0) {
+      try {
+        await upsertVehicle(context.leadId, vehicleData);
+      } catch (err) {
+        console.warn("upsertVehicle falhou:", err);
+      }
+    }
+
+    // Injeta veículos conhecidos no contexto
+    const vehicles = await getVehiclesByLead(context.leadId);
+    const vehicleBlock = formatVehiclesForAI(vehicles);
+    if (vehicleBlock) {
+      messages.push({ role: "system", content: vehicleBlock });
+    }
+
     // Adiciona histórico de mensagens (últimas 15)
     const recentHistory = context.messageHistory.slice(-15);
     for (const msg of recentHistory) {
@@ -298,16 +319,61 @@ export async function generateAIResponse(
     messages.push({ role: "user", content: userMessage });
 
     const model = settings.openaiModel || "gpt-4o-mini";
-    const completion = await openai.chat.completions.create({
-      model,
-      messages,
-      max_tokens: 350,
-      temperature: 0.85,
-      presence_penalty: 0.3,
-      frequency_penalty: 0.25,
-    });
+    const toolCtx: ToolContext = {
+      leadId: context.leadId,
+      organizationId: context.organizationId ?? "",
+      conversationId: context.conversationId ?? undefined,
+    };
 
-    const response = completion.choices[0]?.message?.content;
+    let response: string | null = null;
+    const MAX_TOOL_ROUNDS = 4;
+    const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: openaiMessages,
+        tools: TOOL_DEFINITIONS,
+        tool_choice: "auto",
+        max_tokens: 400,
+        temperature: 0.85,
+        presence_penalty: 0.3,
+        frequency_penalty: 0.25,
+      });
+
+      const choice = completion.choices[0]?.message;
+      if (!choice) break;
+
+      if (choice.tool_calls && choice.tool_calls.length > 0) {
+        openaiMessages.push({
+          role: "assistant",
+          content: choice.content ?? "",
+          tool_calls: choice.tool_calls,
+        });
+        for (const call of choice.tool_calls) {
+          if (call.type !== "function") continue;
+          let args: unknown = {};
+          try {
+            args = JSON.parse(call.function.arguments || "{}");
+          } catch {
+            args = {};
+          }
+          const result = await executeTool(call.function.name, args, toolCtx);
+          openaiMessages.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: result,
+          });
+        }
+        continue;
+      }
+
+      response = choice.content ?? null;
+      break;
+    }
 
     if (!response) {
       return { response: generateFallbackResponse(userMessage, context.leadName) };
