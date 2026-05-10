@@ -13,7 +13,10 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const publicRoutes = ["/login", "/register", "/api/auth", "/api/webhooks", "/api/asaas", "/api/followups/run"];
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  const publicFiles = ["/manifest.json", "/robots.txt", "/sitemap.xml", "/favicon.ico"];
+  const isPublicRoute =
+    publicRoutes.some((route) => pathname.startsWith(route)) ||
+    publicFiles.includes(pathname);
 
   if (isPublicRoute) {
     return NextResponse.next();

@@ -88,8 +88,8 @@ export function DashboardChart({ dailyData, statusData }: DashboardChartProps) {
       </div>
 
       {/* Gráfico de área — leads e mensagens por dia */}
-      <div className="h-[220px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-[220px] w-full" style={{ minWidth: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <AreaChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="gradLeads" x1="0" y1="0" x2="0" y2="1">
@@ -141,8 +141,8 @@ export function DashboardChart({ dailyData, statusData }: DashboardChartProps) {
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
           Leads por status
         </p>
-        <div className="h-[120px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[120px] w-full" style={{ minWidth: 0 }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={statusData} margin={{ top: 0, right: 5, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis
