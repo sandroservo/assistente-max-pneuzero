@@ -238,6 +238,63 @@ Usar como argumento de fechamento:
 
   // === REGRAS DO MAX ===
   {
+    category: "empresa",
+    title: "Pneu Zero — Quem somos, onde estamos, como contatar",
+    content: `Pneu Zero Maranhão — "Qualidade que Move o Seu Dia"
+
+QUEM SOMOS:
+Desde 1980, a Pneu Zero é líder em soluções automotivas no Maranhão. Empresa familiar tradicional, especialista em pneus e serviços automotivos com foco em qualidade, atendimento personalizado e inovação constante.
+
+ENDEREÇO (Matriz - Entroncamento):
+BR-010, 3441 — Entroncamento
+Imperatriz - MA — CEP: 65.913-460
+
+TELEFONES:
+- Vendas / Agendamento: (99) 99145-8080 e (99) 3071-2591
+- Financeiro: (99) 99196-8080
+- SAC: (99) 98406-9097
+
+E-MAIL: pneuzeroitz@gmail.com
+INSTAGRAM: @pneuzeromaranhao
+
+DIFERENCIAIS:
+• Agilidade no serviço — atendimentos rápidos e eficientes
+• Variedade de produtos — grande estoque de pneus e lubrificantes
+• Profissionais qualificados — equipe técnica altamente capacitada
+• Décadas de experiência no mercado
+
+QUANDO USAR: Quando o cliente perguntar sobre endereço, telefone, horário, onde fica, como entrar em contato, há quanto tempo existe a empresa, ou pedir informações institucionais.`,
+    keywords: "endereço, telefone, contato, onde fica, imperatriz, maranhão, br-010, entroncamento, sac, vendas, financeiro, email, instagram, desde quando, história, empresa",
+    priority: 10,
+  },
+  {
+    category: "servicos",
+    title: "Serviços Oferecidos na Pneu Zero",
+    content: `Serviços disponíveis na Pneu Zero (catálogo oficial do site pneuzeromaranhao.com.br):
+
+1. VENDA DE PNEUS E ACESSÓRIOS
+Ampla seleção de pneus e acessórios automotivos. Atende carros de passeio, SUV e utilitários.
+
+2. TROCA DE ÓLEO E FILTROS
+Produtos de alta qualidade para o motor. Inclui filtro de óleo, filtro de ar e troca de fluidos conforme o manual do veículo. Duração média: 30 min.
+
+3. ALINHAMENTO
+Ajustes precisos para uma direção mais segura. Corrige convergência, cambagem e cáster, evitando desgaste irregular dos pneus. Duração média: 45 min. Garantia: 90 dias.
+
+4. BALANCEAMENTO
+Garante a estabilidade e o conforto do veículo. Equilibra peso da roda + pneu para eliminar vibrações. Duração média: 30 min. Garantia: 90 dias.
+
+5. SERVIÇOS DE SUSPENSÃO
+Avaliação e troca de amortecedores, molas, batentes, buchas e bieletas. Duração média: 2 horas.
+
+6. SISTEMA DE FREIOS
+Manutenções preventivas e corretivas. Troca de pastilhas, discos, lonas, fluido de freio e revisão completa do sistema. Duração média: 1h30.
+
+DICA AO MAX: A Pneu Zero é uma loja completa — o cliente resolve tudo em um lugar só. Sempre lembre essa vantagem na conversa.`,
+    keywords: "serviços, pneus, alinhamento, balanceamento, suspensão, freios, óleo, filtros, catálogo, o que oferece, garantia, duração",
+    priority: 10,
+  },
+  {
     category: "regras",
     title: "Regras de Ouro do Max — Atendimento Consultivo",
     content: `Regras que o Max DEVE seguir sempre:

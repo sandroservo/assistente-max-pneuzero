@@ -1,0 +1,111 @@
+{
+  "_meta": {
+    "fonte": "https://pneuzeromaranhao.com.br",
+    "extraidoEm": "2026-05-10",
+    "metodo": "Playwright scraper + curadoria manual"
+  },
+  "empresa": {
+    "nome": "Pneu Zero Maranhão",
+    "slogan": "Qualidade que Move o Seu Dia",
+    "desde": 1980,
+    "descricao": "Desde 1980, a Pneu Zero se estabelece como líder em soluções automotivas no Maranhão. Empresa familiar tradicional, especializada em pneus e serviços automotivos com foco em qualidade e atendimento personalizado.",
+    "valores": [
+      "Tradicional e familiar",
+      "Especialistas em veículos",
+      "Inovação constante",
+      "Compromisso com qualidade"
+    ],
+    "telefones": {
+      "vendas": ["(99) 99145-8080", "(99) 3071-2591"],
+      "financeiro": "(99) 99196-8080",
+      "sac": "(99) 98406-9097",
+      "agendamento": "(99) 99145-8080"
+    },
+    "email": "pneuzeroitz@gmail.com",
+    "enderecos": [
+      {
+        "filial": "Matriz - Entroncamento",
+        "rua": "BR-010, 3441",
+        "bairro": "Entroncamento",
+        "cidade": "Imperatriz",
+        "uf": "MA",
+        "cep": "65.913-460"
+      }
+    ],
+    "redesSociais": {
+      "instagram": "@pneuzeromaranhao",
+      "instagramUrl": "https://instagram.com/pneuzeromaranhao"
+    },
+    "diferenciais": [
+      "Agilidade no Serviço — Atendimentos rápidos e eficientes",
+      "Variedade de Produtos — Grande estoque de pneus e lubrificantes",
+      "Profissionais Qualificados — Equipe técnica altamente capacitada",
+      "Décadas de experiência no mercado"
+    ]
+  },
+  "servicos": [
+    {
+      "categoria": "Pneus",
+      "nome": "Venda de Pneus e Acessórios",
+      "descricao": "Ampla seleção de pneus e acessórios automotivos. Atende carros de passeio, SUV e utilitários.",
+      "duracaoMin": null
+    },
+    {
+      "categoria": "Óleo",
+      "nome": "Troca de Óleo e Filtros",
+      "descricao": "Produtos de alta qualidade para o motor. Inclui filtro de óleo, filtro de ar e troca de fluidos conforme manual do veículo.",
+      "duracaoMin": 30
+    },
+    {
+      "categoria": "Alinhamento",
+      "nome": "Alinhamento",
+      "descricao": "Ajustes precisos para uma direção mais segura. Corrige convergência, cambagem e cáster para evitar desgaste irregular dos pneus.",
+      "duracaoMin": 45,
+      "garantiaDias": 90
+    },
+    {
+      "categoria": "Balanceamento",
+      "nome": "Balanceamento",
+      "descricao": "Garante estabilidade e conforto do veículo. Equilibra peso da roda + pneu para eliminar vibrações.",
+      "duracaoMin": 30,
+      "garantiaDias": 90
+    },
+    {
+      "categoria": "Suspensão",
+      "nome": "Serviços de Suspensão",
+      "descricao": "Desempenho e segurança do veículo. Avaliação e troca de amortecedores, molas, batentes, buchas e bieletas.",
+      "duracaoMin": 120
+    },
+    {
+      "categoria": "Freios",
+      "nome": "Sistema de Freios",
+      "descricao": "Manutenções preventivas e corretivas. Troca de pastilhas, discos, lonas, fluido de freio e revisão completa do sistema.",
+      "duracaoMin": 90
+    }
+  ],
+  "marcasPneu": [],
+  "pneus": [],
+  "formasPagamento": [],
+  "garantias": [
+    {
+      "servico": "Alinhamento",
+      "dias": 90,
+      "observacao": "Cobre desgaste irregular causado por desajuste de geometria. Não cobre danos por impacto."
+    },
+    {
+      "servico": "Balanceamento",
+      "dias": 90,
+      "observacao": "Cobre vibrações causadas por desequilíbrio. Não cobre vibrações de outros componentes."
+    }
+  ],
+  "promocoes": {
+    "info": "Ofertas válidas enquanto durarem os estoques. Consultar Promoções via WhatsApp."
+  },
+  "_pendencias": [
+    "Marcas de pneus comercializadas (Pirelli, Michelin, Goodyear, etc.) — não listadas no site, perguntar ao dono",
+    "Tabela de preços de pneus por medida — não disponível no site",
+    "Formas de pagamento aceitas — não listadas no site",
+    "Horário de funcionamento — não listado no site",
+    "Garantias de outros serviços (suspensão, freios, óleo) — não listadas no site"
+  ]
+}

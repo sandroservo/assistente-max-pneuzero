@@ -1,7 +1,6 @@
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
- * 
  * Schema para Assistente Max - Pneuzero
  */
 
@@ -20,10 +19,10 @@ datasource db {
 // ==========================================
 
 enum UserRole {
-  OWNER       // Dono da organização
-  ADMIN       // Administrador
-  AGENT       // Atendente
-  VIEWER      // Apenas visualização
+  OWNER // Dono da organização
+  ADMIN // Administrador
+  AGENT // Atendente
+  VIEWER // Apenas visualização
 }
 
 enum InstanceStatus {
@@ -34,15 +33,15 @@ enum InstanceStatus {
 }
 
 model Organization {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique // URL amigável: minha-empresa
-  plan        String   @default("free") // free, pro, enterprise
-  maxUsers    Int      @default(3)
-  maxInstances Int     @default(1)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique // URL amigável: minha-empresa
+  plan         String   @default("free") // free, pro, enterprise
+  maxUsers     Int      @default(3)
+  maxInstances Int      @default(1)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   users            User[]
   instances        Instance[]
@@ -57,17 +56,17 @@ model Organization {
 }
 
 model User {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String
   name           String
-  email          String   @unique
+  email          String    @unique
   passwordHash   String
-  role           UserRole @default(AGENT)
+  role           UserRole  @default(AGENT)
   avatar         String?
-  active         Boolean  @default(true)
+  active         Boolean   @default(true)
   lastLoginAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   handoffs       Handoff[]    @relation("AssignedTo")
@@ -82,10 +81,10 @@ model User {
 model Instance {
   id             String         @id @default(cuid())
   organizationId String
-  name           String         // Nome amigável: "WhatsApp Vendas"
-  instanceName   String         // Nome na Evolution API
-  token          String?        // Token específico da instância
-  phone          String?        // Número conectado
+  name           String // Nome amigável: "WhatsApp Vendas"
+  instanceName   String // Nome na Evolution API
+  token          String? // Token específico da instância
+  phone          String? // Número conectado
   status         InstanceStatus @default(DISCONNECTED)
   qrcode         String?        @db.Text
   webhookUrl     String?
@@ -119,8 +118,8 @@ model OrgSettings {
 model ExcludedContact {
   id             String   @id @default(cuid())
   organizationId String
-  phone          String   // número normalizado (apenas dígitos)
-  name           String?  // rótulo opcional, ex.: "João - Comercial"
+  phone          String // número normalizado (apenas dígitos)
+  name           String? // rótulo opcional, ex.: "João - Comercial"
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -163,25 +162,25 @@ model Lead {
   organizationId String
   name           String?
   pushName       String?
-  avatarUrl      String?    // URL do avatar do WhatsApp
+  avatarUrl      String? // URL do avatar do WhatsApp
   email          String?
   phone          String
   city           String?
   status         LeadStatus @default(NOVO)
   ownerType      OwnerType  @default(bot)
-  category       String     @default("geral")  // Para abas/filtros
+  category       String     @default("geral") // Para abas/filtros
   notes          String?
   summary        String?
   priority       String     @default("low") // low, medium, high
   source         String     @default("whatsapp") // whatsapp, instagram, manual
   leadScore      Int        @default(0) // Lead Score 0-1000
-  birthDate      DateTime?  // Data de nascimento para mensagem de aniversário
+  birthDate      DateTime? // Data de nascimento para mensagem de aniversário
   lastMessageAt  DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  cpf             String?  // Opcional, para nota fiscal
-  followUpOptOut  Boolean  @default(false) // Lead pediu para não receber follow-up
+  cpf            String? // Opcional, para nota fiscal
+  followUpOptOut Boolean @default(false) // Lead pediu para não receber follow-up
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   conversations Conversation[]
@@ -204,7 +203,7 @@ model SavedContact {
   organizationId String
   name           String
   phone          String
-  organization   String?  // Ex: "Clínica São Lucas"
+  organization   String? // Ex: "Clínica São Lucas"
   category       String   @default("clinica") // clinica, medico, laboratorio, etc.
   email          String?
   createdAt      DateTime @default(now())
@@ -220,8 +219,8 @@ model Tag {
   color          String   @default("#CC0000") // Vermelho marca Pneuzero
   createdAt      DateTime @default(now())
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leads          Lead[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        Lead[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -230,7 +229,7 @@ model Tag {
 model Conversation {
   id            String    @id @default(cuid())
   leadId        String
-  instanceId    String?   // Instância WhatsApp usada
+  instanceId    String? // Instância WhatsApp usada
   channel       String    @default("whatsapp")
   remoteJid     String
   lastMessageAt DateTime?
@@ -255,14 +254,14 @@ model Message {
   direction        MessageDirection
   type             String           @default("text")
   body             String?
-  mediaUrl         String?          // Caminho do arquivo de mídia (imagem/áudio/vídeo/documento)
-  transcription    String?          // Transcrição de áudio ou descrição de imagem pela IA
+  mediaUrl         String? // Caminho do arquivo de mídia (imagem/áudio/vídeo/documento)
+  transcription    String? // Transcrição de áudio ou descrição de imagem pela IA
   providerId       String?
-  quotedMessageId  String?          // ID interno da mensagem citada (reply)
-  quotedProviderId String?          // providerId da mensagem citada (para Evolution API)
-  status           String?          // sent, delivered, read (read receipts)
-  editedAt         DateTime?        // Data da última edição
-  sentByUserId     String?          // ID do atendente que enviou (null = bot ou lead)
+  quotedMessageId  String? // ID interno da mensagem citada (reply)
+  quotedProviderId String? // providerId da mensagem citada (para Evolution API)
+  status           String? // sent, delivered, read (read receipts)
+  editedAt         DateTime? // Data da última edição
+  sentByUserId     String? // ID do atendente que enviou (null = bot ou lead)
   sentAt           DateTime?
   createdAt        DateTime         @default(now())
 
@@ -274,22 +273,22 @@ model Message {
 }
 
 model FollowUp {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   leadId         String
   conversationId String
   stage          Int
   scheduledAt    DateTime
-  status         String   @default("pending")
+  status         String    @default("pending")
   lastError      String?
-  type           String?  // nps_d1, alinhamento_3m, rodizio_6m, troca_oleo_km, aniversario, lead_frio_3d, garantia_vencendo
+  type           String? // nps_d1, alinhamento_3m, rodizio_6m, troca_oleo_km, aniversario, lead_frio_3d, garantia_vencendo
   vehicleId      String?
   saleId         String?
   serviceLogId   String?
   ruleId         String?
-  template       String?  @db.Text // snapshot do template usado
+  template       String?   @db.Text // snapshot do template usado
   sentAt         DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   lead         Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
   conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -307,7 +306,7 @@ model Handoff {
   id             String   @id @default(cuid())
   leadId         String
   conversationId String
-  assignedToId   String?  // Atendente humano designado
+  assignedToId   String? // Atendente humano designado
   requestedBy    String
   reason         String?
   summary        String?
@@ -335,10 +334,10 @@ model Settings {
 model Knowledge {
   id             String   @id @default(cuid())
   organizationId String
-  category       String   // planos, regras, links, check-ups, pagamento, etc.
+  category       String // planos, regras, links, check-ups, pagamento, etc.
   title          String
   content        String   @db.Text
-  keywords       String?  // palavras-chave separadas por vírgula
+  keywords       String? // palavras-chave separadas por vírgula
   priority       Int      @default(0) // prioridade na busca
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -354,8 +353,8 @@ model Knowledge {
 model LeadMemory {
   id        String   @id @default(cuid())
   leadId    String
-  type      String   // preference, interest, objection, context, summary
-  key       String   // ex: plano_interesse, objecao_preco, preferencia_pagamento
+  type      String // preference, interest, objection, context, summary
+  key       String // ex: plano_interesse, objecao_preco, preferencia_pagamento
   value     String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -369,14 +368,14 @@ model LeadMemory {
 
 // Log de webhooks Asaas (auditoria e debug)
 model AsaasWebhookLog {
-  id          String   @id @default(cuid())
-  event       String
-  paymentId   String?
-  rawPayload  String   @db.Text
-  processed   Boolean  @default(false)
-  errorMsg    String?  @db.Text
-  leadId      String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  event      String
+  paymentId  String?
+  rawPayload String   @db.Text
+  processed  Boolean  @default(false)
+  errorMsg   String?  @db.Text
+  leadId     String?
+  createdAt  DateTime @default(now())
 
   @@index([event])
   @@index([createdAt])
@@ -387,24 +386,24 @@ model AsaasWebhookLog {
 // ==========================================
 
 model Vehicle {
-  id                      String   @id @default(cuid())
+  id                      String    @id @default(cuid())
   leadId                  String
-  placa                   String?  // AAA1A23 (Mercosul) ou AAA1234
+  placa                   String? // AAA1A23 (Mercosul) ou AAA1234
   marca                   String?
   modelo                  String?
   ano                     Int?
   cor                     String?
-  medidaPneu              String?  // ex: 175/70R13
+  medidaPneu              String? // ex: 175/70R13
   kmAtual                 Int?
-  kmEstimadoMes           Int?     // para calcular próxima troca de óleo
+  kmEstimadoMes           Int? // para calcular próxima troca de óleo
   ultimaTrocaOleoKm       Int?
   ultimaTrocaOleoData     DateTime?
   ultimoAlinhamentoData   DateTime?
   ultimoBalanceamentoData DateTime?
   ultimaTrocaPneusData    DateTime?
-  observacoes             String?  @db.Text
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  observacoes             String?   @db.Text
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
   quotes      Quote[]
@@ -426,7 +425,7 @@ model ServiceCategory {
 model ServiceItem {
   id           String   @id @default(cuid())
   categoryId   String
-  nome         String   // "Alinhamento direção 3D"
+  nome         String // "Alinhamento direção 3D"
   descricao    String?  @db.Text
   precoBase    Decimal? @db.Decimal(10, 2)
   garantiaDias Int?
@@ -444,11 +443,11 @@ model ServiceItem {
 
 model TireProduct {
   id        String   @id @default(cuid())
-  marca     String   // Pirelli, Michelin, Goodyear, Continental
-  modelo    String   // Cinturato P1, Energy XM2
-  medida    String   // 175/70R13
-  aro       Int      // 13, 14, 15...
-  uso       String?  // passeio, SUV, caminhonete
+  marca     String // Pirelli, Michelin, Goodyear, Continental
+  modelo    String // Cinturato P1, Energy XM2
+  medida    String // 175/70R13
+  aro       Int // 13, 14, 15...
+  uso       String? // passeio, SUV, caminhonete
   preco     Decimal? @db.Decimal(10, 2)
   estoque   Int      @default(0)
   ativo     Boolean  @default(true)
@@ -474,23 +473,23 @@ enum QuoteStatus {
 }
 
 model Quote {
-  id              String      @id @default(cuid())
-  organizationId  String
-  leadId          String
-  vehicleId       String?
-  conversationId  String?
-  vendedorId      String?     // User (humano) ou null se bot
-  status          QuoteStatus @default(ABERTA)
-  subtotal        Decimal     @db.Decimal(10, 2)
-  desconto        Decimal     @default(0) @db.Decimal(10, 2)
-  total           Decimal     @db.Decimal(10, 2)
-  formaPagamento  String?     // pix, dinheiro, cartao_vista, cartao_parcelado
-  parcelas        Int?
-  observacoes     String?     @db.Text
-  validadeAte     DateTime?
-  enviadaEm       DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  organizationId String
+  leadId         String
+  vehicleId      String?
+  conversationId String?
+  vendedorId     String? // User (humano) ou null se bot
+  status         QuoteStatus @default(ABERTA)
+  subtotal       Decimal     @db.Decimal(10, 2)
+  desconto       Decimal     @default(0) @db.Decimal(10, 2)
+  total          Decimal     @db.Decimal(10, 2)
+  formaPagamento String? // pix, dinheiro, cartao_vista, cartao_parcelado
+  parcelas       Int?
+  observacoes    String?     @db.Text
+  validadeAte    DateTime?
+  enviadaEm      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
@@ -508,10 +507,10 @@ model Quote {
 model QuoteItem {
   id            String  @id @default(cuid())
   quoteId       String
-  tipo          String  // "tire" | "service"
+  tipo          String // "tire" | "service"
   tireId        String?
   serviceItemId String?
-  descricao     String  // snapshot (caso preço mude depois)
+  descricao     String // snapshot (caso preço mude depois)
   quantidade    Int     @default(1)
   precoUnit     Decimal @db.Decimal(10, 2)
   subtotal      Decimal @db.Decimal(10, 2)
@@ -531,22 +530,22 @@ enum SaleStatus {
 }
 
 model Sale {
-  id              String     @id @default(cuid())
-  organizationId  String
-  quoteId         String     @unique
-  leadId          String
-  vehicleId       String?
-  vendedorId      String     // SEMPRE preenchido — quem fechou
-  total           Decimal    @db.Decimal(10, 2)
-  formaPagamento  String
-  parcelas        Int?
-  dataFechamento  DateTime   @default(now())
-  dataServico     DateTime?  // quando vai/foi executado
-  status          SaleStatus @default(AGENDADA)
-  notaFiscal      String?
-  observacoes     String?    @db.Text
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id             String     @id @default(cuid())
+  organizationId String
+  quoteId        String     @unique
+  leadId         String
+  vehicleId      String?
+  vendedorId     String // SEMPRE preenchido — quem fechou
+  total          Decimal    @db.Decimal(10, 2)
+  formaPagamento String
+  parcelas       Int?
+  dataFechamento DateTime   @default(now())
+  dataServico    DateTime? // quando vai/foi executado
+  status         SaleStatus @default(AGENDADA)
+  notaFiscal     String?
+  observacoes    String?    @db.Text
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   quote        Quote        @relation(fields: [quoteId], references: [id])
@@ -568,7 +567,7 @@ model ServiceLog {
   id          String    @id @default(cuid())
   vehicleId   String
   saleId      String?
-  tipo        String    // "alinhamento" | "balanceamento" | "troca_oleo" | "troca_pneu" | "freios" | ...
+  tipo        String // "alinhamento" | "balanceamento" | "troca_oleo" | "troca_pneu" | "freios" | ...
   descricao   String?   @db.Text
   kmNoServico Int?
   executadoEm DateTime  @default(now())
@@ -589,8 +588,8 @@ model NPSResponse {
   id           String   @id @default(cuid())
   saleId       String   @unique
   leadId       String
-  nota         Int      // 0-10
-  categoria    String   // detrator | neutro | promotor
+  nota         Int // 0-10
+  categoria    String // detrator | neutro | promotor
   comentario   String?  @db.Text
   respondidoEm DateTime @default(now())
 
@@ -604,7 +603,7 @@ model NPSResponse {
 model FollowUpRule {
   id             String   @id @default(cuid())
   organizationId String
-  tipo           String   // nps_d1, alinhamento_3m, rodizio_6m, troca_oleo_km, aniversario, lead_frio_3d, lead_frio_15d, garantia_vencendo
+  tipo           String // nps_d1, alinhamento_3m, rodizio_6m, troca_oleo_km, aniversario, lead_frio_3d, lead_frio_15d, garantia_vencendo
   nome           String
   ativo          Boolean  @default(true)
   gatilho        String   @db.Text // JSON: { "evento": "sale.concluida", "delayDias": 1, "horarioEnvio": "14:00" }

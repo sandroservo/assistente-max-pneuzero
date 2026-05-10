@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scraper raw output (regenerável; só catalog curado vai no git)
+agent/pneuzero-raw.json
