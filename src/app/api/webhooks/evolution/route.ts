@@ -345,9 +345,10 @@ export async function POST(req: Request) {
     });
 
     // Gera resposta humanizada com IA (Max - Pneuzero)
-    const { response: botResponse, extractedData } = await generateAIResponse(text ?? "", {
+    const { response: botResponse, extractedData, cotacaoEnviada } = await generateAIResponse(text ?? "", {
       leadId: lead.id,
       organizationId: lead.organizationId,
+      conversationId: conversation.id,
       leadName: lead.name,
       leadEmail: lead.email,
       leadCity: lead.city,
@@ -389,11 +390,12 @@ export async function POST(req: Request) {
       const scoreBreakdown = await updateLeadScore(lead.id, messageHistory, text ?? "");
       console.log(`Lead ${lead.id} score: ${scoreBreakdown.total}/1000 (P:${scoreBreakdown.perfil} N:${scoreBreakdown.necessidade} C:${scoreBreakdown.consciencia} B:${scoreBreakdown.comportamento} D:${scoreBreakdown.decisao})`);
 
-      // Detecta status por keywords (prioridade: PERDIDO > FECHADO > etc.)
+      // Detecta status por keywords + sinais de tools (cotação enviada)
       const detectedStatus = detectLeadStatus(
         messageHistory,
         text ?? "",
-        lead.status
+        lead.status,
+        { cotacaoEnviada: cotacaoEnviada ?? false }
       );
 
       // Se keywords detectaram mudança, usa keyword; senão usa score para sugerir

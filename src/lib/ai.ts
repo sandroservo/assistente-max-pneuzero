@@ -124,7 +124,12 @@ export { DEFAULT_SYSTEM_PROMPT };
 export async function generateAIResponse(
   userMessage: string,
   context: ConversationContext
-): Promise<{ response: string; extractedData?: { name?: string; email?: string } }> {
+): Promise<{
+  response: string;
+  extractedData?: { name?: string; email?: string };
+  cotacaoEnviada?: boolean;
+  handoffSolicitado?: boolean;
+}> {
   try {
     const settings = await getSystemSettings();
     const openai = await getOpenAIClient();
@@ -332,6 +337,9 @@ export async function generateAIResponse(
       content: m.content,
     }));
 
+    // Rastreia tools chamadas pelo modelo para inferir status do funil.
+    const toolsCalled = new Set<string>();
+
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const completion = await openai.chat.completions.create({
         model,
@@ -355,6 +363,7 @@ export async function generateAIResponse(
         });
         for (const call of choice.tool_calls) {
           if (call.type !== "function") continue;
+          toolsCalled.add(call.function.name);
           let args: unknown = {};
           try {
             args = JSON.parse(call.function.arguments || "{}");
@@ -387,7 +396,10 @@ export async function generateAIResponse(
       await updateLeadData(context.leadId, extractedData);
     }
 
-    return { response: response.trim(), extractedData };
+    const cotacaoEnviada = toolsCalled.has("buscar_pneu") || toolsCalled.has("buscar_servico");
+    const handoffSolicitado = toolsCalled.has("transferir_humano");
+
+    return { response: response.trim(), extractedData, cotacaoEnviada, handoffSolicitado };
   } catch (error) {
     console.error("Erro ao gerar resposta IA:", error);
     return { response: generateFallbackResponse(userMessage, context.leadName) };
@@ -576,145 +588,117 @@ export function shouldTransferToHuman(text: string): boolean {
 }
 
 /**
- * Detecta a etapa do funil baseada no contexto da conversa
- * Retorna o status sugerido para o lead
+ * Detecta a etapa do funil Pneuzero baseada na mensagem atual + sinais de tools.
+ * Prioridade: PERDIDO > FECHADO > EM_NEGOCIACAO > QUALIFICADO > CONSCIENTIZADO > LEAD_FRIO > EM_ATENDIMENTO.
+ * Retorna o status sugerido (ou null para manter o atual).
  */
 export function detectLeadStatus(
   messageHistory: { direction: string; body: string | null }[],
   currentMessage: string,
-  currentStatus: string
+  currentStatus: string,
+  opts: { cotacaoEnviada?: boolean } = {}
 ): string | null {
-  const allMessages = messageHistory
-    .filter((m) => m.body)
-    .map((m) => m.body!.toLowerCase())
-    .join(" ");
   const msg = currentMessage.toLowerCase();
-  const combined = `${allMessages} ${msg}`;
 
-  // PERDIDO - Sinais de desistência ou não interesse
+  // PERDIDO — Desistência ou rejeição
   const lostKeywords = [
-    "não tenho interesse",
-    "nao tenho interesse",
-    "não quero",
-    "nao quero",
-    "não preciso",
-    "nao preciso",
-    "desisto",
-    "deixa pra lá",
-    "deixa pra la",
-    "esquece",
-    "não é pra mim",
-    "nao e pra mim",
-    "muito caro",
-    "sem condições",
-    "sem condicoes",
-    "não posso pagar",
-    "nao posso pagar",
-    "já comprei em outro lugar",
-    "ja comprei em outro lugar",
-    "já tenho",
-    "ja tenho",
-    "não me interessa",
-    "nao me interessa",
+    "não tenho interesse", "nao tenho interesse",
+    "não quero", "nao quero",
+    "não preciso", "nao preciso",
+    "desisto", "deixa pra lá", "deixa pra la", "esquece",
+    "não é pra mim", "nao e pra mim",
+    "muito caro", "tá caro", "ta caro", "ficou caro",
+    "sem condições", "sem condicoes",
+    "não posso pagar", "nao posso pagar",
+    "fora do meu orçamento", "fora do orcamento",
+    "já comprei em outro lugar", "ja comprei em outro lugar",
+    "já fiz em outra", "ja fiz em outra",
+    "outra borracharia", "outro centro",
+    "já tenho", "ja tenho",
+    "não me interessa", "nao me interessa",
   ];
   if (lostKeywords.some((k) => msg.includes(k))) {
     return "PERDIDO";
   }
 
-  // FECHADO - Sinais de fechamento/compra
+  // FECHADO — Confirmação de compra/agendamento
   const closedKeywords = [
-    "vou comprar",
-    "quero comprar",
-    "fechar negócio",
-    "fechar negocio",
-    "vou fechar",
-    "fechado",
-    "pode mandar o pix",
-    "manda o pix",
-    "vou pagar",
-    "quero pagar",
-    "aceito",
-    "vamos fechar",
-    "combinado",
-    "pode enviar",
-    "manda o contrato",
-    "vou assinar",
-    "contrato assinado",
-    "pagamento feito",
-    "já paguei",
-    "ja paguei",
-    "paguei agora",
+    "vou comprar", "quero comprar",
+    "fechar negócio", "fechar negocio",
+    "vou fechar", "fechado", "tá fechado", "ta fechado",
+    "pode mandar o pix", "manda o pix", "fiz o pix",
+    "vou pagar", "quero pagar", "paguei", "já paguei", "ja paguei", "paguei agora",
+    "aceito", "vamos fechar", "combinado", "pode enviar",
+    "vou levar amanhã", "vou levar amanha", "vou levar hoje",
+    "tô indo aí", "to indo ai", "tô indo agora", "to indo agora",
+    "vou aí", "to indo", "tô indo", "passo aí",
+    "marca pra mim", "agendado", "pode marcar",
   ];
   if (closedKeywords.some((k) => msg.includes(k))) {
     return "FECHADO";
   }
 
-  // QUALIFICADO - Somente quando demonstra interesse REAL em fechar/contratar um plano específico
-  // Frases genéricas como "tenho interesse", "quero saber mais" NÃO qualificam
-  const qualifiedKeywords = [
-    "quero assinar",
-    "quero contratar",
-    "vou assinar",
-    "quero o plano",
-    "quero esse plano",
-    "quero o rotina",
-    "quero o especializado",
-    "quero o cobertura total",
-    "gostei do plano",
-    "gostei do rotina",
-    "gostei do especializado",
-    "como faço pra assinar",
-    "como faco pra assinar",
-    "como assino",
-    "me manda o link",
-    "manda o link",
-    "pode mandar o link",
-    "quero fechar",
-    "bora fechar",
-    "vamos fechar",
-    "formas de pagamento",
-    "como pago",
-    "aceito o plano",
-    "pode ser esse",
-    "vou querer",
-    "quero esse",
+  // EM_NEGOCIACAO — Discussão de forma de pagamento / desconto
+  const negotiationKeywords = [
+    "à vista", "a vista", "no pix", "no cartão", "no cartao",
+    "parcelado", "em quantas vezes", "quantas vezes",
+    "boleto", "tem desconto", "consegue desconto", "abaixar o valor",
+    "melhor preço", "melhor preco", "faz por menos", "faz mais barato",
+    "no débito", "no debito", "no crédito", "no credito",
   ];
-  const hasQualifiedSignal = qualifiedKeywords.some((k) => msg.includes(k));
-  if (hasQualifiedSignal && currentStatus !== "FECHADO") {
+  if (
+    negotiationKeywords.some((k) => msg.includes(k)) &&
+    ["CONSCIENTIZADO", "QUALIFICADO", "EM_ATENDIMENTO"].includes(currentStatus)
+  ) {
+    return "EM_NEGOCIACAO";
+  }
+
+  // QUALIFICADO — Intenção concreta de agendar/fechar
+  const qualifiedKeywords = [
+    "quero levar o carro", "quero levar",
+    "quero agendar", "pode agendar", "quer agendar",
+    "vou levar", "como faço pra agendar", "como faco pra agendar",
+    "qual o melhor dia", "qual dia pode", "que horas", "que horário", "que horario",
+    "tem horário", "tem horario", "tem horário pra", "tem horario pra",
+    "quero fechar", "bora fechar", "vamos fechar",
+    "pode marcar", "marca aí", "marca ai",
+    "vou querer", "quero esse", "pode ser esse",
+    "como faz pra", "como funciona o agendamento",
+  ];
+  if (qualifiedKeywords.some((k) => msg.includes(k)) && currentStatus !== "FECHADO") {
     return "QUALIFICADO";
   }
 
-  // EM_ATENDIMENTO - lead que já interagiu significativamente (6+ mensagens no histórico = conversa avançou)
-  // Antes disso permanece NOVO para o time de vendas identificar quem entrou e não engajou
-  if (currentStatus === "NOVO" && messageHistory.length >= 6) {
-    return "EM_ATENDIMENTO";
+  // CONSCIENTIZADO — Max chamou tool de cotação (preço enviado)
+  // Só avança a partir de NOVO/EM_ATENDIMENTO; não regride status mais avançados.
+  if (
+    opts.cotacaoEnviada &&
+    (currentStatus === "NOVO" || currentStatus === "EM_ATENDIMENTO")
+  ) {
+    return "CONSCIENTIZADO";
   }
 
-  // LEAD_FRIO - Sinais de lead esfriando
+  // LEAD_FRIO — Hesitação / esfriamento
   const coldKeywords = [
-    "vou pensar",
-    "preciso pensar",
-    "depois eu vejo",
-    "não sei se",
-    "nao sei se",
-    "talvez",
-    "não agora",
-    "nao agora",
-    "mais tarde",
-    "outro dia",
-    "semana que vem",
-    "mês que vem",
-    "mes que vem",
-    "não é o momento",
-    "nao e o momento",
-    "vou analisar",
-    "deixa eu ver",
+    "vou pensar", "preciso pensar", "pensar melhor",
+    "depois eu vejo", "depois eu te falo",
+    "não sei se", "nao sei se", "talvez",
+    "não agora", "nao agora", "mais tarde", "outro dia",
+    "semana que vem", "mês que vem", "mes que vem",
+    "não é o momento", "nao e o momento",
+    "vou analisar", "vou ver", "deixa eu ver", "vou avaliar",
   ];
   if (coldKeywords.some((k) => msg.includes(k))) {
     return "LEAD_FRIO";
   }
 
-  return null; // Mantém o status atual
+  // EM_ATENDIMENTO — Lead engajado mas ainda sem sinais fortes.
+  // Promove só a partir de NOVO após algumas mensagens.
+  if (currentStatus === "NOVO" && messageHistory.length >= 4) {
+    return "EM_ATENDIMENTO";
+  }
+
+  return null; // Mantém status atual
 }
 
 /**
