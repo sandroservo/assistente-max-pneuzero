@@ -343,10 +343,24 @@ export async function POST(req: Request) {
       where: { conversationId: conversation.id },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: { direction: true, body: true, createdAt: true },
+      select: {
+        direction: true,
+        body: true,
+        type: true,
+        transcription: true,
+        sentByUserId: true,
+        createdAt: true,
+        sentByUser: { select: { name: true } },
+      },
     });
     const messageHistoryFull = recentDesc.reverse();
-    const messageHistory = messageHistoryFull.map(({ direction, body }) => ({ direction, body }));
+    const messageHistory = messageHistoryFull.map((m) => ({
+      direction: m.direction,
+      body: m.body,
+      type: m.type,
+      transcription: m.transcription,
+      sentByUserName: m.sentByUser?.name ?? null,
+    }));
 
     // Detecta gap (cliente retomando conversa após pausa).
     // Última mensagem antes da atual: se foi há > 12h, sinaliza retomada.
@@ -356,6 +370,11 @@ export async function POST(req: Request) {
     const gapHours = lastBefore
       ? (Date.now() - lastBefore.createdAt.getTime()) / 36e5
       : 0;
+
+    // Quem fez a última mensagem out (Max ou atendente humano)?
+    const lastOut = [...previousMessages].reverse().find((m) => m.direction === "out");
+    const lastHumanAgent = lastOut?.sentByUser?.name ?? null;
+    const lastOutFromHuman = !!lastOut?.sentByUserId;
 
     // Gera resposta humanizada com IA (Max - Pneuzero)
     const { response: botResponse, extractedData, cotacaoEnviada } = await generateAIResponse(text ?? "", {
@@ -369,6 +388,8 @@ export async function POST(req: Request) {
       leadStatus: lead.status,
       leadSummary: lead.summary,
       gapHours,
+      lastOutFromHuman,
+      lastHumanAgent,
       messageHistory,
     });
     

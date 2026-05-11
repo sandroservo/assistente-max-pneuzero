@@ -30,6 +30,44 @@ interface Message {
   content: string;
 }
 
+interface HistoryMessage {
+  direction: "in" | "out";
+  body: string | null;
+  type?: string;
+  transcription?: string | null;
+  sentByUserName?: string | null; // null = bot Max; string = nome do atendente humano
+}
+
+/**
+ * Formata mensagem do histórico para o prompt da IA.
+ * Cobre 3 casos:
+ *  - msg só com mídia (áudio/imagem) → usa transcription
+ *  - msg out enviada por humano → prefixa "[Atendente Nome]:"
+ *  - msg de texto normal → body
+ * Retorna null quando não há nada útil a enviar.
+ */
+function formatHistoryContent(msg: HistoryMessage): string | null {
+  let body = msg.body?.trim() ?? "";
+
+  if (!body && msg.transcription) {
+    if (msg.type === "audio") body = `[Áudio transcrito] ${msg.transcription}`;
+    else if (msg.type === "image") body = `[Imagem descrita] ${msg.transcription}`;
+    else body = msg.transcription;
+  }
+
+  if (!body && msg.type) {
+    body = `[${msg.type}]`;
+  }
+
+  if (!body) return null;
+
+  if (msg.direction === "out" && msg.sentByUserName) {
+    return `[Atendente ${msg.sentByUserName}]: ${body}`;
+  }
+
+  return body;
+}
+
 interface ConversationContext {
   leadId: string;
   organizationId?: string | null;
@@ -40,8 +78,10 @@ interface ConversationContext {
   leadPhone?: string;
   leadStatus?: string;
   leadSummary?: string | null;
-  gapHours?: number; // tempo desde a última mensagem antes da atual
-  messageHistory: { direction: "in" | "out"; body: string | null }[];
+  gapHours?: number;          // tempo desde a última mensagem antes da atual
+  lastOutFromHuman?: boolean; // última msg out foi enviada por atendente humano
+  lastHumanAgent?: string | null;
+  messageHistory: HistoryMessage[];
 }
 
 /**
@@ -333,16 +373,28 @@ export async function generateAIResponse(
       });
     }
 
+    // Sinaliza retomada após handoff humano: Max precisa continuar de onde
+    // o atendente parou, não reiniciar do zero nem ignorar o que ele disse.
+    if (context.lastOutFromHuman) {
+      const agente = context.lastHumanAgent ?? "um atendente";
+      messages.push({
+        role: "system",
+        content: `IMPORTANTE — RETOMADA APÓS ATENDIMENTO HUMANO: As últimas mensagens enviadas ao cliente vieram do atendente *${agente}* (não suas). Leia o que ${agente} disse, entenda o ponto da conversa, e CONTINUE de onde ele parou. Não recomece a conversa, não repita perguntas que ${agente} já fez, não desfaça compromissos ou promessas que ${agente} fez. Mantenha sua personalidade do Max, mas honre o que o humano combinou.`,
+      });
+    }
+
     // Adiciona histórico de mensagens (últimas 30 — janela maior para
-    // continuidade em conversas longas).
+    // continuidade em conversas longas). Mensagens de áudio/imagem usam
+    // transcription quando body é vazio. Mensagens out do humano são
+    // marcadas com prefixo pra IA distinguir do que ela própria disse.
     const recentHistory = context.messageHistory.slice(-30);
     for (const msg of recentHistory) {
-      if (msg.body) {
-        messages.push({
-          role: msg.direction === "in" ? "user" : "assistant",
-          content: msg.body,
-        });
-      }
+      const content = formatHistoryContent(msg);
+      if (!content) continue;
+      messages.push({
+        role: msg.direction === "in" ? "user" : "assistant",
+        content,
+      });
     }
 
     // Adiciona a mensagem atual
