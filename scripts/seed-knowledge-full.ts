@@ -236,6 +236,126 @@ Usar como argumento de fechamento:
     priority: 8,
   },
 
+  // === CATÁLOGO DE PNEUS (preços oficiais) ===
+  {
+    category: "pneus",
+    title: "Catálogo de Pneus — Pneuzero (preços a partir de)",
+    content: `Pneus em estoque e seus preços oficiais (a partir de):
+
+XBRI 185/60R15 — Carro de passeio aro 15 — A PARTIR DE R$ 409,90
+XBRI 265/60R18 A/T — SUV/caminhonete aro 18 (uso misto/trilha) — A PARTIR DE R$ 1.199,90
+XBRI 265/60R18 H/T — SUV/caminhonete aro 18 (rodovia) — A PARTIR DE R$ 1.159,90
+A/T 265/65R17 — SUV/caminhonete aro 17 (uso misto) — A PARTIR DE R$ 935,00
+A/T 265/70R16 — SUV/caminhonete aro 16 (uso misto) — A PARTIR DE R$ 968,90
+
+OBSERVAÇÕES:
+• Valores "a partir de" — podem variar conforme marca/modelo escolhido.
+• Sempre confirmar disponibilidade em estoque.
+• Outras marcas e medidas: consultar a equipe (Pirelli, Michelin, Goodyear etc. podem estar em estoque sob demanda).
+
+DIFERENCIAL: Montagem grátis, bicos grátis, alinhamento e balanceamento podem entrar nos kits promocionais (ver Knowledge "Kits Promocionais").`,
+    keywords: "pneu, pneus, xbri, aro 15, aro 16, aro 17, aro 18, 185/60r15, 265/60r18, 265/65r17, 265/70r16, a/t, h/t, suv, caminhonete, preço pneu, valor pneu",
+    priority: 10,
+  },
+
+  // === KITS PROMOCIONAIS ===
+  {
+    category: "promocoes",
+    title: "Kits Promocionais — Combos com pneu + alinhamento + balanceamento",
+    content: `KITS PROMOCIONAIS PNEUZERO (parcelados no cartão):
+
+🏆 KIT KING
+• 2 Pneus + Alinhamento + Balanceamento
+• 10x de R$ 149,80 SEM JUROS (total R$ 1.498,00)
+• Indicado para troca dos 2 dianteiros (ou traseiros)
+
+🚗 KIT MINI
+• 4 Pneus + Alinhamento + Balanceamento
+• 10x de R$ 239,00 (total R$ 2.390,00)
+• Indicado para troca completa de carros de passeio
+
+🛻 KIT L200
+• 4 Pneus na medida 265/70 R16 + Alinhamento + Balanceamento
+• 10x de R$ 365,99 (total R$ 3.659,90)
+• Específico para Mitsubishi L200 e similares
+
+QUANDO OFERECER:
+• Cliente pediu cotação de 2 ou 4 pneus → ofereça o KIT correspondente (KING para 2, MINI para 4).
+• Cliente tem L200, Triton, Hilux ou outra picape → KIT L200 ou MINI conforme medida.
+• SEMPRE mencione que o kit já INCLUI alinhamento e balanceamento (vantagem que o cliente percebe).
+• Parcelamento sujeito à aprovação do cartão.`,
+    keywords: "kit, kit king, kit mini, kit l200, combo, promoção, parcelado, 10x, 2 pneus, 4 pneus, l200, triton, hilux, picape",
+    priority: 10,
+  },
+
+  // === PROMOÇÕES INDIVIDUAIS ===
+  {
+    category: "promocoes",
+    title: "Promoções Ativas — Freios e Óleo",
+    content: `PROMOÇÕES ATIVAS:
+
+🛑 TROCA DE PASTILHA DE FREIO — R$ 179,90 (promocional)
+• Inclui mão de obra. Pastilhas variam conforme modelo.
+• Garantia de 90 dias na mão de obra.
+
+🛢️ TROCA DE ÓLEO PARA CARRO DE PASSEIO
+• Produto: HEXLUB Ecopower
+• A PARTIR DE R$ 150,00
+• Inclui filtro de óleo.
+
+🛻 TROCA DE ÓLEO PARA CAMINHONETE / SUV
+• Produto: HEXLUB Massive 5W30
+• A PARTIR DE R$ 378,90
+• Inclui filtro de óleo.
+
+QUANDO USAR:
+• Cliente perguntar valor de pastilha → cite a promoção R$ 179,90.
+• Cliente disse "preciso trocar óleo" + carro de passeio → HEXLUB Ecopower R$ 150.
+• Cliente disse "preciso trocar óleo" + caminhonete/SUV → HEXLUB Massive R$ 378,90.
+• Sempre confirmar modelo do veículo antes de fechar valor.`,
+    keywords: "promoção, pastilha, freio, R$ 179, óleo, óleo carro, óleo caminhonete, hexlub, ecopower, massive, 5w30",
+    priority: 9,
+  },
+
+  // === PREÇOS DE SERVIÇOS AVULSOS ===
+  {
+    category: "servicos",
+    title: "Tabela de Preços — Serviços Automotivos (a partir de)",
+    content: `PREÇOS BASE DE SERVIÇOS PNEUZERO (a partir de):
+
+PNEUS & GEOMETRIA
+• Alinhamento e Balanceamento (carro de passeio): A PARTIR DE R$ 80,00 (garantia 90 dias)
+
+ÓLEO & FILTROS
+• Troca de Óleo: A PARTIR DE R$ 50,00 (mão de obra; produto à parte)
+
+FREIOS
+• Troca de Pastilha: A PARTIR DE R$ 50,00 (promoção R$ 179,90 — ver promoções)
+
+MOTOR & TRANSMISSÃO
+• Troca de Correias: A PARTIR DE R$ 70,00
+• Serviço de Kit de Embreagem: A PARTIR DE R$ 350,00
+• Troca de Junta Homocinética: A PARTIR DE R$ 60,00
+
+ELÉTRICA
+• Serviço de Injeção Eletrônica: A PARTIR DE R$ 120,00 (indicado quando há luzes acesas no painel)
+
+SUSPENSÃO & DIREÇÃO
+• Troca de Pivô: A PARTIR DE R$ 50,00
+• Troca de Terminal: A PARTIR DE R$ 30,00
+• Troca de Rolamento da Roda: A PARTIR DE R$ 70,00
+
+OUTROS
+• Troca de Reservatório de Água: A PARTIR DE R$ 70,00
+
+OBSERVAÇÕES:
+• Valores "a partir de" — variam conforme modelo do veículo.
+• Sempre pedir modelo + ano antes de confirmar preço final.
+• Parcelamentos sujeitos à aprovação.`,
+    keywords: "preço, valor, serviço, alinhamento, balanceamento, óleo, pastilha, correia, embreagem, junta, homocinética, injeção, pivô, terminal, rolamento, reservatório, tabela",
+    priority: 10,
+  },
+
   // === REGRAS DO MAX ===
   {
     category: "empresa",

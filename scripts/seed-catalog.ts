@@ -59,6 +59,7 @@ const PLACEHOLDER_CATEGORIES = [
   "Óleo",
   "Elétrica",
   "Bateria",
+  "Mecânica",
 ];
 
 async function main() {
@@ -95,7 +96,8 @@ async function main() {
   }
   console.log(`Categorias: ${categoriasSet.size}`);
 
-  // Serviços
+  // Serviços — limpa e recria pra refletir exatamente o catálogo atual
+  await prisma.serviceItem.deleteMany({});
   let svcCount = 0;
   for (const svc of catalog.servicos ?? []) {
     const categoryId = categoriasIds.get(svc.categoria);

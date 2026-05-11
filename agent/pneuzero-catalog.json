@@ -1,26 +1,22 @@
 {
   "_meta": {
-    "fonte": "https://pneuzeromaranhao.com.br",
-    "extraidoEm": "2026-05-10",
-    "metodo": "Playwright scraper + curadoria manual"
+    "fonte": "Catálogo oficial Pneuzero Maranhão (passado pelo dono)",
+    "atualizadoEm": "2026-05-10",
+    "metodo": "Dados oficiais fornecidos pela direção"
   },
   "empresa": {
-    "nome": "Pneu Zero Maranhão",
+    "nome": "Pneuzero Maranhão",
+    "tipo": "Auto Center",
     "slogan": "Qualidade que Move o Seu Dia",
     "desde": 1980,
-    "descricao": "Desde 1980, a Pneu Zero se estabelece como líder em soluções automotivas no Maranhão. Empresa familiar tradicional, especializada em pneus e serviços automotivos com foco em qualidade e atendimento personalizado.",
-    "valores": [
-      "Tradicional e familiar",
-      "Especialistas em veículos",
-      "Inovação constante",
-      "Compromisso com qualidade"
-    ],
+    "descricao": "Auto Center especializado em pneus e serviços automotivos. Desde 1980, líder em soluções automotivas no Maranhão.",
     "telefones": {
+      "central": "(99) 99145-8080",
       "vendas": ["(99) 99145-8080", "(99) 3071-2591"],
       "financeiro": "(99) 99196-8080",
-      "sac": "(99) 98406-9097",
-      "agendamento": "(99) 99145-8080"
+      "sac": "(99) 98406-9097"
     },
+    "site": "www.pneuzeromaranhao.com.br",
     "email": "pneuzeroitz@gmail.com",
     "enderecos": [
       {
@@ -37,75 +33,72 @@
       "instagramUrl": "https://instagram.com/pneuzeromaranhao"
     },
     "diferenciais": [
-      "Agilidade no Serviço — Atendimentos rápidos e eficientes",
-      "Variedade de Produtos — Grande estoque de pneus e lubrificantes",
-      "Profissionais Qualificados — Equipe técnica altamente capacitada",
-      "Décadas de experiência no mercado"
+      "Agilidade no serviço",
+      "Variedade de produtos",
+      "Profissionais qualificados",
+      "Décadas de experiência"
     ]
   },
+  "pneus": [
+    { "marca": "XBRI", "modelo": "XBRI 185/60R15", "medida": "185/60R15", "aro": 15, "uso": "passeio", "preco": 409.90 },
+    { "marca": "XBRI", "modelo": "XBRI A/T 265/60R18", "medida": "265/60R18", "aro": 18, "uso": "SUV/caminhonete A/T", "preco": 1199.90 },
+    { "marca": "XBRI", "modelo": "XBRI H/T 265/60R18", "medida": "265/60R18", "aro": 18, "uso": "SUV/caminhonete H/T", "preco": 1159.90 },
+    { "marca": "Genérica", "modelo": "A/T 265/65R17", "medida": "265/65R17", "aro": 17, "uso": "SUV/caminhonete A/T", "preco": 935.00 },
+    { "marca": "Genérica", "modelo": "A/T 265/70R16", "medida": "265/70R16", "aro": 16, "uso": "SUV/caminhonete A/T", "preco": 968.90 }
+  ],
+  "marcasPneu": ["XBRI"],
   "servicos": [
+    { "categoria": "Alinhamento", "nome": "Alinhamento e Balanceamento (Carro de passeio)", "descricao": "Carros de passeio.", "precoBase": 80.00, "duracaoMin": 60, "garantiaDias": 90 },
+    { "categoria": "Óleo", "nome": "Troca de Óleo", "descricao": "Inclui filtro. Promoção HEXLUB Ecopower (carro) a partir de R$ 150,00; HEXLUB Massive 5W30 (caminhonete) a partir de R$ 378,90.", "precoBase": 50.00, "duracaoMin": 30 },
+    { "categoria": "Freios", "nome": "Troca de Pastilha de Freio", "descricao": "Promoção atual: R$ 179,90.", "precoBase": 50.00, "precoPromocional": 179.90, "duracaoMin": 60, "garantiaDias": 90 },
+    { "categoria": "Mecânica", "nome": "Troca de Correias", "descricao": "Correia dentada / poly-V conforme modelo do veículo.", "precoBase": 70.00, "duracaoMin": 90 },
+    { "categoria": "Elétrica", "nome": "Serviço de Injeção Eletrônica", "descricao": "Diagnóstico e reparo. Indicado quando há luzes acesas no painel.", "precoBase": 120.00, "duracaoMin": 90 },
+    { "categoria": "Suspensão", "nome": "Troca de Pivô", "descricao": "Pivô da suspensão.", "precoBase": 50.00, "duracaoMin": 60 },
+    { "categoria": "Suspensão", "nome": "Troca de Terminal", "descricao": "Terminal de direção.", "precoBase": 30.00, "duracaoMin": 45 },
+    { "categoria": "Mecânica", "nome": "Serviço de Kit de Embreagem", "descricao": "Kit completo de embreagem: disco, platô e rolamento.", "precoBase": 350.00, "duracaoMin": 240 },
+    { "categoria": "Mecânica", "nome": "Troca de Junta Homocinética", "descricao": "Junta homocinética / coifa.", "precoBase": 60.00, "duracaoMin": 90 },
+    { "categoria": "Mecânica", "nome": "Troca de Reservatório de Água", "descricao": "Reservatório de água do radiador.", "precoBase": 70.00, "duracaoMin": 60 },
+    { "categoria": "Suspensão", "nome": "Troca de Rolamento da Roda", "descricao": "Rolamento de roda.", "precoBase": 70.00, "duracaoMin": 60 }
+  ],
+  "kitsPromocionais": [
     {
-      "categoria": "Pneus",
-      "nome": "Venda de Pneus e Acessórios",
-      "descricao": "Ampla seleção de pneus e acessórios automotivos. Atende carros de passeio, SUV e utilitários.",
-      "duracaoMin": null
+      "nome": "Kit King",
+      "descricao": "2 Pneus + Alinhamento + Balanceamento",
+      "valorParcelado": "10x R$ 149,80 sem juros",
+      "valorTotal": 1498.00
     },
     {
-      "categoria": "Óleo",
-      "nome": "Troca de Óleo e Filtros",
-      "descricao": "Produtos de alta qualidade para o motor. Inclui filtro de óleo, filtro de ar e troca de fluidos conforme manual do veículo.",
-      "duracaoMin": 30
+      "nome": "Kit Mini",
+      "descricao": "4 Pneus + Alinhamento + Balanceamento",
+      "valorParcelado": "10x R$ 239,00",
+      "valorTotal": 2390.00
     },
     {
-      "categoria": "Alinhamento",
-      "nome": "Alinhamento",
-      "descricao": "Ajustes precisos para uma direção mais segura. Corrige convergência, cambagem e cáster para evitar desgaste irregular dos pneus.",
-      "duracaoMin": 45,
-      "garantiaDias": 90
-    },
-    {
-      "categoria": "Balanceamento",
-      "nome": "Balanceamento",
-      "descricao": "Garante estabilidade e conforto do veículo. Equilibra peso da roda + pneu para eliminar vibrações.",
-      "duracaoMin": 30,
-      "garantiaDias": 90
-    },
-    {
-      "categoria": "Suspensão",
-      "nome": "Serviços de Suspensão",
-      "descricao": "Desempenho e segurança do veículo. Avaliação e troca de amortecedores, molas, batentes, buchas e bieletas.",
-      "duracaoMin": 120
-    },
-    {
-      "categoria": "Freios",
-      "nome": "Sistema de Freios",
-      "descricao": "Manutenções preventivas e corretivas. Troca de pastilhas, discos, lonas, fluido de freio e revisão completa do sistema.",
-      "duracaoMin": 90
+      "nome": "Kit L200",
+      "descricao": "4 Pneus 265/70 R16 + Alinhamento + Balanceamento (específico Mitsubishi L200)",
+      "valorParcelado": "10x R$ 365,99",
+      "valorTotal": 3659.90
     }
   ],
-  "marcasPneu": [],
-  "pneus": [],
-  "formasPagamento": [],
+  "promocoesAtivas": [
+    { "tipo": "freios", "descricao": "Troca de pastilhas de freio por R$ 179,90 (promoção)" },
+    { "tipo": "oleo_carro", "descricao": "Troca de óleo HEXLUB Ecopower (carro de passeio) a partir de R$ 150,00" },
+    { "tipo": "oleo_caminhonete", "descricao": "Troca de óleo HEXLUB Massive 5W30 (caminhonete) a partir de R$ 378,90" }
+  ],
   "garantias": [
-    {
-      "servico": "Alinhamento",
-      "dias": 90,
-      "observacao": "Cobre desgaste irregular causado por desajuste de geometria. Não cobre danos por impacto."
-    },
-    {
-      "servico": "Balanceamento",
-      "dias": 90,
-      "observacao": "Cobre vibrações causadas por desequilíbrio. Não cobre vibrações de outros componentes."
-    }
+    { "servico": "Alinhamento", "dias": 90 },
+    { "servico": "Balanceamento", "dias": 90 },
+    { "servico": "Pastilha de Freio", "dias": 90 }
   ],
-  "promocoes": {
-    "info": "Ofertas válidas enquanto durarem os estoques. Consultar Promoções via WhatsApp."
-  },
+  "observacoes": [
+    "Valores sujeitos a alteração sem aviso prévio.",
+    "Consultar disponibilidade de estoque.",
+    "Parcelamentos sujeitos à aprovação.",
+    "Serviços podem variar conforme modelo do veículo."
+  ],
   "_pendencias": [
-    "Marcas de pneus comercializadas (Pirelli, Michelin, Goodyear, etc.) — não listadas no site, perguntar ao dono",
-    "Tabela de preços de pneus por medida — não disponível no site",
-    "Formas de pagamento aceitas — não listadas no site",
-    "Horário de funcionamento — não listado no site",
-    "Garantias de outros serviços (suspensão, freios, óleo) — não listadas no site"
+    "Outras marcas de pneu trabalhadas além de XBRI (Pirelli, Michelin, Goodyear, etc.) — confirmar com dono.",
+    "Lista completa de medidas em estoque — atual cobre só 5 medidas oficialmente catalogadas.",
+    "Horário de funcionamento — não informado (assumir Seg-Sex 08-18, Sáb 08-12 padrão setor)."
   ]
 }
