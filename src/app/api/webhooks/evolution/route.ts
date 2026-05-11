@@ -336,13 +336,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, action: "handoff" });
     }
 
-    // Busca histórico de mensagens para contexto da IA
-    const messageHistory = await prisma.message.findMany({
+    // Busca as ÚLTIMAS 50 mensagens (não as primeiras) e devolve em ordem
+    // cronológica para a IA. Antes a query pegava take:20 ASC, perdendo
+    // todo o contexto recente em conversas longas.
+    const recentDesc = await prisma.message.findMany({
       where: { conversationId: conversation.id },
-      orderBy: { createdAt: "asc" },
-      take: 20,
-      select: { direction: true, body: true },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { direction: true, body: true, createdAt: true },
     });
+    const messageHistoryFull = recentDesc.reverse();
+    const messageHistory = messageHistoryFull.map(({ direction, body }) => ({ direction, body }));
+
+    // Detecta gap (cliente retomando conversa após pausa).
+    // Última mensagem antes da atual: se foi há > 12h, sinaliza retomada.
+    const lastIn = [...messageHistoryFull].reverse().find((m) => m.direction === "in");
+    const previousMessages = messageHistoryFull.filter((m) => m !== lastIn);
+    const lastBefore = previousMessages[previousMessages.length - 1];
+    const gapHours = lastBefore
+      ? (Date.now() - lastBefore.createdAt.getTime()) / 36e5
+      : 0;
 
     // Gera resposta humanizada com IA (Max - Pneuzero)
     const { response: botResponse, extractedData, cotacaoEnviada } = await generateAIResponse(text ?? "", {
@@ -354,6 +367,8 @@ export async function POST(req: Request) {
       leadCity: lead.city,
       leadPhone: lead.phone,
       leadStatus: lead.status,
+      leadSummary: lead.summary,
+      gapHours,
       messageHistory,
     });
     

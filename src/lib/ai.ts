@@ -39,6 +39,8 @@ interface ConversationContext {
   leadCity?: string | null;
   leadPhone?: string;
   leadStatus?: string;
+  leadSummary?: string | null;
+  gapHours?: number; // tempo desde a última mensagem antes da atual
   messageHistory: { direction: "in" | "out"; body: string | null }[];
 }
 
@@ -309,8 +311,31 @@ export async function generateAIResponse(
       messages.push({ role: "system", content: vehicleBlock });
     }
 
-    // Adiciona histórico de mensagens (últimas 15)
-    const recentHistory = context.messageHistory.slice(-15);
+    // Resumo da conversa salvo (Lead.summary): contexto comprimido de tudo
+    // que aconteceu antes da janela de histórico. Crucial para conversas
+    // longas onde as msgs antigas saíram da janela.
+    if (context.leadSummary && context.leadSummary.trim().length > 0) {
+      messages.push({
+        role: "system",
+        content: `<ResumoConversa>\n${context.leadSummary.trim()}\n</ResumoConversa>\n\nIMPORTANTE: O bloco acima é o resumo da conversa anterior com este cliente. Use para CONTINUAR de onde paramos — não recomece nem peça dados que já foram coletados.`,
+      });
+    }
+
+    // Sinaliza retomada quando cliente volta após pausa (>12h)
+    if (context.gapHours && context.gapHours > 12) {
+      const periodo =
+        context.gapHours < 24 ? `${Math.round(context.gapHours)} horas`
+        : context.gapHours < 168 ? `${Math.round(context.gapHours / 24)} dias`
+        : `${Math.round(context.gapHours / 168)} semana(s)`;
+      messages.push({
+        role: "system",
+        content: `O cliente está RETOMANDO a conversa após ${periodo} de pausa. Seja natural: cumprimente brevemente, faça referência ao que vocês conversaram (use o ResumoConversa) e retome de onde parou. NÃO trate como conversa nova.`,
+      });
+    }
+
+    // Adiciona histórico de mensagens (últimas 30 — janela maior para
+    // continuidade em conversas longas).
+    const recentHistory = context.messageHistory.slice(-30);
     for (const msg of recentHistory) {
       if (msg.body) {
         messages.push({
