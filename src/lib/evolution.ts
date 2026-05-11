@@ -20,34 +20,38 @@ async function getEvolutionConfig() {
 }
 
 /**
- * Envia status "composing" (digitando) para o contato
+ * Envia status "composing" (digitando) para o contato.
+ * Falha aqui é cosmética — apenas warn no log, nunca propaga.
  */
 export async function evolutionSendPresence(number: string, presence: "composing" | "recording" | "paused" = "composing") {
   const { baseUrl, instance, token } = await getEvolutionConfig();
+  if (!baseUrl || !instance || !token) return;
 
-  // Evolution API v2 - endpoint correto: /chat/sendPresence
   const url = `${baseUrl.replace(/\/api\/?$/, "")}/chat/sendPresence/${instance}`;
 
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: token,
-      },
-      body: JSON.stringify({
-        number,
-        presence,
-        delay: 1200,
-      }),
+      headers: { "Content-Type": "application/json", apikey: token },
+      body: JSON.stringify({ number, presence, delay: 1200 }),
+      signal: AbortSignal.timeout(10000),
     });
-    
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("Erro presence:", res.status, body);
+      console.warn(`[Evolution] presence ${number}: ${res.status} (ignorado)`);
     }
-  } catch (error) {
-    console.error("Erro ao enviar presence:", error);
+  } catch {
+    // ignora — presence é cosmético
+  }
+}
+
+/**
+ * Erro tipado retornado por sendText quando o número não existe no WhatsApp.
+ * Permite o caller marcar o lead como inválido sem retentar.
+ */
+export class EvolutionInvalidNumberError extends Error {
+  constructor(public readonly number: string) {
+    super(`Evolution: número ${number} não existe no WhatsApp`);
+    this.name = "EvolutionInvalidNumberError";
   }
 }
 
@@ -78,6 +82,15 @@ export async function evolutionSendText({ number, text }: SendTextArgs) {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+
+    // Evolution retorna 400 com exists:false quando o número não tem
+    // WhatsApp. Não vale a pena retentar — propaga erro tipado para o
+    // caller poder marcar o lead.
+    if (res.status === 400 && body.includes('"exists":false')) {
+      console.warn(`[Evolution] número ${number} não tem WhatsApp`);
+      throw new EvolutionInvalidNumberError(number);
+    }
+
     console.error("[Evolution] Send failed:", res.status, body);
     throw new Error(`Evolution sendText failed: ${res.status} ${body}`);
   }

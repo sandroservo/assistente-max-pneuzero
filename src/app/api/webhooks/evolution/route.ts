@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
-import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64 } from "@/lib/evolution";
+import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64, EvolutionInvalidNumberError } from "@/lib/evolution";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { saveMedia } from "@/lib/media-storage";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
@@ -401,8 +401,22 @@ export async function POST(req: Request) {
       sendStatus = "sent";
     } catch (err) {
       sendError = err instanceof Error ? err.message : String(err);
-      console.error("Erro ao enviar resposta do bot via Evolution:", err);
       sendStatus = "failed";
+
+      // Número não tem WhatsApp — marca lead como PERDIDO e não retenta.
+      if (err instanceof EvolutionInvalidNumberError) {
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            status: "PERDIDO",
+            notes: `${lead.notes ?? ""}\n[${new Date().toISOString()}] Número sem WhatsApp ativo (Evolution exists:false).`.trim(),
+            followUpOptOut: true,
+          },
+        });
+        console.warn(`[webhook] Lead ${lead.id} (${lead.phone}) marcado PERDIDO — número sem WhatsApp`);
+      } else {
+        console.error("Erro ao enviar resposta do bot via Evolution:", err);
+      }
     }
 
     await prisma.message.create({
