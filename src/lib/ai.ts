@@ -291,48 +291,33 @@ export async function generateAIResponse(
       }
     }
 
-    // Contexto de email e cidade: Max sabe o que já tem e o que falta pedir
-    const missingData: string[] = [];
-    const collectedData: string[] = [];
-
-    if (context.leadEmail) {
-      collectedData.push(`Email: ${context.leadEmail}`);
-    } else {
-      missingData.push("email");
-    }
-
+    // Coleta apenas CIDADE (email e outros dados extras só se cliente passar
+    // espontaneamente — extractLeadData ainda captura pela regex).
     if (context.leadCity) {
-      collectedData.push(`Cidade: ${context.leadCity}`);
-    } else {
-      missingData.push("cidade");
-    }
-
-    if (collectedData.length > 0) {
       messages.push({
         role: "system",
-        content: `Dados já coletados do cliente: ${collectedData.join(", ")}. NÃO peça esses dados novamente.`,
+        content: `Cidade do cliente: ${context.leadCity}. NÃO pergunte cidade de novo.`,
       });
-    }
-
-    if (missingData.length > 0 && context.leadName && !isFirstMessage) {
-      const inMsgCount = context.messageHistory.filter(m => m.direction === "in").length;
+    } else if (context.leadName && !isFirstMessage) {
+      const inMsgCount = context.messageHistory.filter((m) => m.direction === "in").length;
       if (inMsgCount >= 4) {
         messages.push({
           role: "system",
-          content: `URGENTE: Ainda FALTA coletar: ${missingData.join(" e ")}. Já são ${inMsgCount + 1} mensagens do cliente e esses dados ainda não foram coletados. PEÇA AGORA de forma simpática mas direta. Ex: "Ah, me passa seu email pra eu te enviar as informações? E de qual cidade você é? 📩". NÃO adie mais.`,
+          content: `Ainda FALTA saber a CIDADE do cliente. Pergunte de forma natural quando fizer sentido. Ex: "Você é de qual cidade aqui no Maranhão?". NÃO peça email ou outros dados — só cidade.`,
         });
       } else if (inMsgCount >= 2) {
         messages.push({
           role: "system",
-          content: `Ainda FALTA coletar: ${missingData.join(" e ")}. Aproveite esta resposta para pedir de forma natural. Ex: "Me passa seu email e de qual cidade você é? Assim consigo te enviar tudo certinho 📩". Pode pedir junto ou separado.`,
-        });
-      } else {
-        messages.push({
-          role: "system",
-          content: `Dados que ainda faltam: ${missingData.join(" e ")}. Peça quando surgir um momento adequado na conversa.`,
+          content: `Quando achar um gancho natural, pergunte a cidade. Ex: "Aproveitando, você é de qual cidade?". NÃO peça email.`,
         });
       }
     }
+
+    // Reforça: NÃO pedir email em hipótese alguma.
+    messages.push({
+      role: "system",
+      content: `IMPORTANTE: NUNCA peça email do cliente. Não é necessário pra atendimento. Se o cliente passar espontaneamente, OK — sistema captura sozinho.`,
+    });
 
     // Extrai dados estruturados do veículo (placa, medida pneu, km, ano) e faz upsert.
     const vehicleData = extractVehicleData(userMessage);
