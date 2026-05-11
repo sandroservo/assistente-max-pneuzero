@@ -17,6 +17,7 @@ export async function POST(
 
     const lead = await prisma.lead.findUnique({
       where: { id },
+      include: { conversations: { take: 1, orderBy: { createdAt: "desc" } } },
     });
 
     if (!lead) {
@@ -28,11 +29,22 @@ export async function POST(
 
     await prisma.lead.update({
       where: { id },
-      data: { 
-        ownerType: "bot", 
-        status: "EM_ATENDIMENTO" 
+      data: {
+        ownerType: "bot",
+        status: "EM_ATENDIMENTO"
       },
     });
+
+    // Fecha handoffs em aberto/atribuídos da conversa
+    if (lead.conversations[0]) {
+      await prisma.handoff.updateMany({
+        where: {
+          conversationId: lead.conversations[0].id,
+          status: { in: ["open", "assigned"] },
+        },
+        data: { status: "closed" },
+      });
+    }
 
     return NextResponse.json({ ok: true, message: "Lead devolvido ao bot" });
   } catch (error) {

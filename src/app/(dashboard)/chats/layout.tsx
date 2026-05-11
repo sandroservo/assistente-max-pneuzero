@@ -24,6 +24,14 @@ export default async function ChatsLayout({
         take: 1,
         select: { body: true, type: true, direction: true },
       },
+      handoffs: {
+        where: { status: { in: ["open", "assigned"] } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: {
+          assignedTo: { select: { id: true, name: true, avatar: true } },
+        },
+      },
     },
     take: 200,
   });
@@ -40,6 +48,14 @@ export default async function ChatsLayout({
 
   const conversations = uniqueConvos.map((c) => {
     const lastMsg = (c as any).messages?.[0] ?? null;
+    const activeHandoff = (c as any).handoffs?.[0] ?? null;
+    const assignedAgent = activeHandoff?.assignedTo
+      ? {
+          id: activeHandoff.assignedTo.id as string,
+          name: activeHandoff.assignedTo.name as string,
+          avatar: (activeHandoff.assignedTo.avatar ?? null) as string | null,
+        }
+      : null;
     return {
       id: c.id,
       leadId: c.leadId,
@@ -55,6 +71,7 @@ export default async function ChatsLayout({
       lastMessageBody: lastMsg?.body ?? null,
       lastMessageType: lastMsg?.type ?? "text",
       lastMessageDirection: lastMsg?.direction ?? "in",
+      assignedAgent,
     };
   });
 

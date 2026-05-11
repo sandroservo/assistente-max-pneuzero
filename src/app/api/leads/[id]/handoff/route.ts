@@ -57,12 +57,20 @@ export async function POST(
         },
       });
 
+      // Fecha handoffs anteriores em aberto desta conversa
+      await prisma.handoff.updateMany({
+        where: { conversationId: lead.conversations[0].id, status: "open" },
+        data: { status: "closed" },
+      });
+
       await prisma.handoff.create({
         data: {
           leadId: id,
           conversationId: lead.conversations[0].id,
+          assignedToId: session?.user?.id || null,
           requestedBy: "human",
           reason: "Atendente assumiu o lead",
+          status: "assigned",
         },
       });
     }

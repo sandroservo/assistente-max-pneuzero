@@ -28,6 +28,7 @@ interface Conversation {
   lastMessageBody: string | null;
   lastMessageType: string;
   lastMessageDirection: string;
+  assignedAgent?: { id: string; name: string; avatar: string | null } | null;
 }
 
 interface ConversationSidebarProps {
@@ -376,6 +377,18 @@ export default function ConversationSidebar({
                     )}
                   </div>
                 </div>
+
+                {/* Linha do atendente responsável quando humano assumiu */}
+                {conv.ownerType === "human" && (
+                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 w-fit max-w-full">
+                    <UserCheck className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {conv.assignedAgent?.name
+                        ? `Atendido por ${conv.assignedAgent.name}`
+                        : "Em atendimento humano"}
+                    </span>
+                  </div>
+                )}
               </div>
             </button>
           );
