@@ -131,14 +131,6 @@ export async function POST(req: Request) {
         })
       : null;
 
-    // Busca ou cria lead vinculado à organização
-    let lead = await prisma.lead.findFirst({
-      where: { 
-        organizationId,
-        phone,
-      },
-    });
-
     // Busca foto de perfil se não tiver ainda
     let profilePicture: string | undefined = avatarUrl;
     if (!profilePicture) {
@@ -149,31 +141,45 @@ export async function POST(req: Request) {
     // Mensagens enviadas (fromMe) carregam o nome da conta business, não do cliente
     const clientPushName = !fromMe ? pushName : undefined;
 
-    if (lead) {
+    // Upsert atômico evita race condition (Evolution dispara eventos em paralelo
+    // pro mesmo número — findFirst+create concorrentes quebravam com P2002).
+    let lead = await prisma.lead.upsert({
+      where: { organizationId_phone: { organizationId, phone } },
+      update: {
+        lastMessageAt: new Date(),
+        ...(clientPushName && { pushName: clientPushName }),
+      },
+      create: {
+        organizationId,
+        phone,
+        name: clientPushName || null,
+        pushName: clientPushName || null,
+        avatarUrl: profilePicture || null,
+        status: "NOVO",
+        ownerType: "bot",
+        lastMessageAt: new Date(),
+      },
+    });
+
+    // Backfill name/avatarUrl quando ainda vazios (sem race — update por id)
+    const needsName = clientPushName && !lead.name;
+    const needsAvatar = profilePicture && !lead.avatarUrl;
+    if (needsName || needsAvatar) {
       lead = await prisma.lead.update({
         where: { id: lead.id },
         data: {
-          lastMessageAt: new Date(),
-          ...(clientPushName && { pushName: clientPushName }),
-          ...(clientPushName && !lead.name && { name: clientPushName }),
-          ...(profilePicture && !lead.avatarUrl && { avatarUrl: profilePicture }),
+          ...(needsName && { name: clientPushName }),
+          ...(needsAvatar && { avatarUrl: profilePicture }),
         },
       });
-    } else {
-      lead = await prisma.lead.create({
-        data: {
-          organizationId,
-          phone,
-          name: clientPushName || null,
-          pushName: clientPushName || null,
-          avatarUrl: profilePicture || null,
-          status: "NOVO",
-          ownerType: "bot",
-          lastMessageAt: new Date(),
-        },
-      });
+    }
 
-      // Adiciona automaticamente como contato salvo para envio via vCard
+    // Garante contato salvo (idempotente: ignora se já existe)
+    const existingContact = await prisma.savedContact.findFirst({
+      where: { organizationId, phone },
+      select: { id: true },
+    });
+    if (!existingContact) {
       await prisma.savedContact.create({
         data: {
           organizationId,
@@ -181,7 +187,7 @@ export async function POST(req: Request) {
           phone,
           category: "lead",
         },
-      }).catch(() => { /* ignora duplicatas */ });
+      }).catch(() => { /* ignora corridas */ });
     }
 
     // Single-tenant: uma conversa por lead (busca por leadId apenas)
