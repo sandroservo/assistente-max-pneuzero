@@ -32,20 +32,33 @@ function escapeSqlLike(termo: string): string {
 
 export async function buscarProdutosPorDescricao(
   termo: string,
-  limit = 20
+  limit = 30
 ): Promise<{ ok: true; produtos: ProdutoEstoque[] } | { ok: false; error: string }> {
   if (!API_URL || !API_KEY) {
     return { ok: false, error: "Pneuzero API não configurada (PNEUZERO_API_URL/PNEUZERO_API_KEY)" };
   }
 
-  const cleaned = termo.trim().slice(0, 100);
+  const cleaned = termo.trim().slice(0, 120);
   if (!cleaned) {
     return { ok: false, error: "Termo vazio" };
   }
 
-  const safe = escapeSqlLike(cleaned);
+  // Quebra em palavras (cada uma vira AND LIKE) — pega "filtro ar tecfil" em qualquer ordem.
+  // Drops palavras < 2 chars e limita a 6 palavras pra evitar query degenerada.
+  const palavras = cleaned
+    .split(/\s+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length >= 2)
+    .slice(0, 6);
+
+  const safeWords = (palavras.length > 0 ? palavras : [cleaned]).map(escapeSqlLike);
+  const whereClauses = safeWords.map((w) => `proDescricao LIKE '%${w}%'`).join(" AND ");
+  const safeFull = escapeSqlLike(cleaned);
   const top = Math.min(Math.max(limit, 1), 50);
-  const sql = `SELECT TOP ${top} proDescricao, zzz_proEstoqueAtual FROM produto WHERE proDescricao LIKE '%${safe}%' ORDER BY proDescricao`;
+
+  // Prioriza: 1) match exato, 2) começa com termo, 3) contém termo completo, 4) demais.
+  // Dentro de cada grupo: estoque positivo primeiro, depois alfabético.
+  const sql = `SELECT TOP ${top} proDescricao, zzz_proEstoqueAtual FROM produto WHERE ${whereClauses} ORDER BY CASE WHEN proDescricao = '${safeFull}' THEN 0 WHEN proDescricao LIKE '${safeFull}%' THEN 1 WHEN proDescricao LIKE '%${safeFull}%' THEN 2 ELSE 3 END, CASE WHEN zzz_proEstoqueAtual > 0 THEN 0 ELSE 1 END, proDescricao`;
 
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(), 15_000);
