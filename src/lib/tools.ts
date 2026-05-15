@@ -84,14 +84,14 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "buscar_estoque",
       description:
-        "Consulta estoque ao vivo no ERP da Pneuzero (tabela produto). Use quando o lead pedir disponibilidade ou perguntar se um item específico tem em estoque. Faz LIKE em proDescricao, retorna nome e quantidade atual. Estoque <= 0 significa indisponível.",
+        "Consulta estoque ao vivo no ERP da Pneuzero (tabela produto). USE SEMPRE quando o lead perguntar se TEM, se ESTÁ DISPONÍVEL, ou pedir QUALQUER item específico — pneus, filtros (ar, óleo, combustível, cabine), óleos, lonas, pastilhas, baterias, lâmpadas, protetores, câmaras, válvulas, kits, peças. NÃO se limite a pneus. Faz LIKE em proDescricao do ERP, retorna descrição exata e quantidade. Estoque > 0 = disponível; <= 0 = indisponível (oferecer transferir_humano para confirmar reposição).",
       parameters: {
         type: "object",
         properties: {
           termo: {
             type: "string",
             description:
-              "Trecho da descrição do produto (ex: 'PNEU 175/70 R13', 'GOODYEAR 205', 'ALINHAMENTO'). Mínimo 2 caracteres.",
+              "Trecho da descrição EXATAMENTE como o lead falou ou o mais próximo (ex: 'FILTRO DE AR', 'PROTETOR ARO 25', 'PNEU 175/70 R13', 'GOODYEAR 205', 'ALINHAMENTO'). Use as palavras do lead. Mínimo 2 caracteres.",
           },
           limite: {
             type: "integer",
@@ -164,23 +164,32 @@ export async function executeTool(
   args: unknown,
   ctx: ToolContext
 ): Promise<string> {
+  console.log(`[tool] call name=${name} leadId=${ctx.leadId} args=${JSON.stringify(args)}`);
   try {
+    let result: string;
     switch (name) {
       case "registrar_veiculo":
-        return await execRegistrarVeiculo(args as RegistrarVeiculoArgs, ctx);
+        result = await execRegistrarVeiculo(args as RegistrarVeiculoArgs, ctx);
+        break;
       case "buscar_pneu":
-        return await execBuscarPneu(args as BuscarPneuArgs);
+        result = await execBuscarPneu(args as BuscarPneuArgs);
+        break;
       case "buscar_servico":
-        return await execBuscarServico(args as BuscarServicoArgs);
+        result = await execBuscarServico(args as BuscarServicoArgs);
+        break;
       case "buscar_estoque":
-        return await execBuscarEstoque(args as BuscarEstoqueArgs);
+        result = await execBuscarEstoque(args as BuscarEstoqueArgs);
+        break;
       case "transferir_humano":
-        return await execTransferirHumano(args as TransferirHumanoArgs, ctx);
+        result = await execTransferirHumano(args as TransferirHumanoArgs, ctx);
+        break;
       default:
-        return JSON.stringify({ error: `Tool desconhecida: ${name}` });
+        result = JSON.stringify({ error: `Tool desconhecida: ${name}` });
     }
+    console.log(`[tool] result name=${name} bytes=${result.length} preview=${result.slice(0, 200)}`);
+    return result;
   } catch (err) {
-    console.error(`Tool ${name} falhou:`, err);
+    console.error(`[tool] error name=${name}:`, err);
     return JSON.stringify({ error: "Falha interna ao executar tool" });
   }
 }
