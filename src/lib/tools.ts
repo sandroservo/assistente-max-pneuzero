@@ -11,6 +11,7 @@ import OpenAI from "openai";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { upsertVehicle } from "./vehicle";
+import { buscarProdutosPorDescricao } from "./pneuzero-stock";
 
 export interface ToolContext {
   leadId: string;
@@ -81,6 +82,30 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "buscar_estoque",
+      description:
+        "Consulta estoque ao vivo no ERP da Pneuzero (tabela produto). Use quando o lead pedir disponibilidade ou perguntar se um item específico tem em estoque. Faz LIKE em proDescricao, retorna nome e quantidade atual. Estoque <= 0 significa indisponível.",
+      parameters: {
+        type: "object",
+        properties: {
+          termo: {
+            type: "string",
+            description:
+              "Trecho da descrição do produto (ex: 'PNEU 175/70 R13', 'GOODYEAR 205', 'ALINHAMENTO'). Mínimo 2 caracteres.",
+          },
+          limite: {
+            type: "integer",
+            description: "Máximo de produtos retornados (1-50, padrão 20).",
+          },
+        },
+        required: ["termo"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "transferir_humano",
       description:
         "Cria handoff para um vendedor humano. Use quando: lead pede atendente, lead pede agendamento concreto, cotação está pronta para fechamento, ou há dúvida técnica complexa.",
@@ -118,6 +143,11 @@ interface TransferirHumanoArgs {
   resumo?: string;
 }
 
+interface BuscarEstoqueArgs {
+  termo: string;
+  limite?: number;
+}
+
 interface RegistrarVeiculoArgs {
   placa?: string;
   marca?: string;
@@ -142,6 +172,8 @@ export async function executeTool(
         return await execBuscarPneu(args as BuscarPneuArgs);
       case "buscar_servico":
         return await execBuscarServico(args as BuscarServicoArgs);
+      case "buscar_estoque":
+        return await execBuscarEstoque(args as BuscarEstoqueArgs);
       case "transferir_humano":
         return await execTransferirHumano(args as TransferirHumanoArgs, ctx);
       default:
@@ -227,6 +259,34 @@ async function execBuscarServico(args: BuscarServicoArgs): Promise<string> {
       garantiaDias: s.garantiaDias,
       duracaoMin: s.duracaoMin,
     })),
+  });
+}
+
+async function execBuscarEstoque(args: BuscarEstoqueArgs): Promise<string> {
+  const result = await buscarProdutosPorDescricao(args.termo, args.limite ?? 20);
+  if (!result.ok) {
+    return JSON.stringify({
+      ok: false,
+      error: result.error,
+      aviso: "Não consegui consultar o estoque agora. Ofereça transferir para humano confirmar.",
+    });
+  }
+  const produtos = result.produtos.map((p) => ({
+    descricao: p.proDescricao,
+    estoque: p.zzz_proEstoqueAtual,
+    disponivel: p.zzz_proEstoqueAtual > 0,
+  }));
+  return JSON.stringify({
+    ok: true,
+    termo: args.termo,
+    total: produtos.length,
+    produtos,
+    aviso:
+      produtos.length === 0
+        ? "Nenhum produto encontrado com esse termo."
+        : produtos.every((p) => !p.disponivel)
+          ? "Nenhum item com estoque positivo. Ofereça alternativa ou transferir para humano."
+          : undefined,
   });
 }
 
