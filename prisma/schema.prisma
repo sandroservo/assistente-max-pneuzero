@@ -53,6 +53,7 @@ model Organization {
   quotes           Quote[]
   sales            Sale[]
   followUpRules    FollowUpRule[]
+  teamMessages     TeamMessage[]
 }
 
 model User {
@@ -68,11 +69,13 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  handoffs       Handoff[]    @relation("AssignedTo")
-  sentMessages   Message[]    @relation("SentByUser")
-  vendedorQuotes Quote[]      @relation("VendedorQuote")
-  vendedorSales  Sale[]       @relation("VendedorSale")
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  handoffs          Handoff[]          @relation("AssignedTo")
+  sentMessages      Message[]          @relation("SentByUser")
+  vendedorQuotes    Quote[]            @relation("VendedorQuote")
+  vendedorSales     Sale[]             @relation("VendedorSale")
+  teamMessages      TeamMessage[]      @relation("TeamMessageAuthor")
+  teamChannelStates TeamChannelState[]
 
   @@index([organizationId])
   @@index([email])
@@ -617,4 +620,32 @@ model FollowUpRule {
   @@unique([organizationId, tipo])
   @@index([organizationId])
   @@index([tipo])
+}
+
+// Chat interno entre vendedores: canal "Geral" (dmKey null) e DMs (dmKey = "minId_maxId").
+model TeamMessage {
+  id             String   @id @default(cuid())
+  organizationId String
+  authorId       String
+  dmKey          String? // null = canal global da org; preenchido = par canônico "userA_userB" (menor_id_maior_id)
+  body           String   @db.Text
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User         @relation(name: "TeamMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, dmKey, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+// Última visita do usuário em um canal (chave: "global" ou "dm:<dmKey>") — base do unread count.
+model TeamChannelState {
+  userId      String
+  channelKey  String // "global" ou "dm:<dmKey>"
+  lastSeenAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, channelKey])
+  @@index([userId])
 }

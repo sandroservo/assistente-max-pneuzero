@@ -23,13 +23,16 @@ import {
   PanelLeftClose,
   PanelLeft,
   Contact,
+  MessagesSquare,
   Menu,
   X,
 } from "lucide-react";
+import { TeamUnreadBadge } from "./TeamUnreadBadge";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/chats", icon: MessageSquare, label: "Chats" },
+  { href: "/equipe", icon: MessagesSquare, label: "Equipe" },
   { href: "/contacts", icon: Contact, label: "Contatos" },
   { href: "/kanban", icon: ClipboardList, label: "Kanban" },
   { href: "/knowledge", icon: BookOpen, label: "Conhecimento" },
@@ -123,7 +126,8 @@ export function Sidebar() {
                   title={collapsed && !isMobile ? item.label : undefined}
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
-                  {(isMobile || !collapsed) && <span>{item.label}</span>}
+                  {(isMobile || !collapsed) && <span className="flex-1">{item.label}</span>}
+                  {item.href === "/equipe" && <TeamUnreadBadge />}
                 </Link>
               </li>
             );
