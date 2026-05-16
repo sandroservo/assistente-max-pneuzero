@@ -13,7 +13,8 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const ADMIN_EMAIL = "admin@amovidas.com.br";
+// Mesmo email de scripts/seed-admin.ts
+const ADMIN_EMAIL = "admin@pneuzero.com.br";
 const NEW_PASSWORD = "admin123";
 
 async function main() {

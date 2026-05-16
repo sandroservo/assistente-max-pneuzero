@@ -1,0 +1,28 @@
+# PostgreSQL + pgvector (extensões em docker/init/)
+# Uso: docker compose up -d
+#
+# DATABASE_URL de exemplo (ajuste no .env):
+# postgresql://postgres:postgres@localhost:5432/pneuzero?schema=public
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: assistente-max-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pneuzero
+    ports:
+      - "5432:5432"
+    volumes:
+      - assistente_max_pgdata:/var/lib/postgresql/data
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pneuzero"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  assistente_max_pgdata:
