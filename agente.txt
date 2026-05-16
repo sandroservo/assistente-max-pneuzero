@@ -1,0 +1,21 @@
+Agente criado: .claude/agents/max-dev.md
+
+Resumo:
+
+Nome: max-dev
+Tools: Bash, Read, Edit, Write, Grep, Glob, TodoWrite, WebFetch
+Model: sonnet
+Job: ler docs/specs/ + progress.md, executar fase atual, manter estado, testar antes de marcar feito.
+Protocolo cada sessão:
+
+Lê progress.md → sabe onde parou
+Confirma fase via git status + critérios de aceite
+Cria TodoWrite da fase
+Executa task por task, testa, marca completed
+Atualiza progress.md
+Commit pequeno por entrega lógica
+Regras invioláveis já no agent: não inventar dado, não resetar Prisma, não force-push, build antes commit, spec ganha de código.
+
+Também criei docs/specs/progress.md — estado inicial: Fase 1, 0/8 tarefas.
+
+Como usar: "max-dev, comece Fase 1" ou "@max-dev continuar desenvolvimento". Agente puxa contexto sozinho via specs.
