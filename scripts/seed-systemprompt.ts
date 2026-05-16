@@ -2,46 +2,43 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  * 
- * Script para popular o system prompt no banco a partir do arquivo
+ * Script para popular o system prompt no banco usando o DEFAULT_SYSTEM_PROMPT
  */
 
-import { readFileSync } from "fs";
-import { join } from "path";
-import { prisma } from "../src/lib/prisma";
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import { DEFAULT_SYSTEM_PROMPT } from "../src/lib/ai";
+
+const prisma = new PrismaClient();
 
 async function main() {
   try {
-    // Lê o arquivo do system prompt
-    const promptPath = join(process.cwd(), "agent", "systemprompt.md");
-    const systemPrompt = readFileSync(promptPath, "utf-8");
-    
-    console.log(`📝 Lido system prompt: ${systemPrompt.length} caracteres`);
+    console.log(`System prompt: ${DEFAULT_SYSTEM_PROMPT.length} caracteres`);
     
     // Salva no banco
     await prisma.settings.upsert({
       where: { key: "system_prompt" },
-      update: { value: systemPrompt },
+      update: { value: DEFAULT_SYSTEM_PROMPT },
       create: {
         id: "system_prompt",
         key: "system_prompt",
-        value: systemPrompt,
+        value: DEFAULT_SYSTEM_PROMPT,
         encrypted: false,
       },
     });
     
-    console.log("✅ System prompt salvo no banco com sucesso!");
+    console.log("System prompt salvo no banco com sucesso!");
     
     // Verifica
     const saved = await prisma.settings.findUnique({
       where: { key: "system_prompt" },
     });
     
-    console.log(`\n✅ Verificação: ${saved?.value?.length || 0} caracteres salvos`);
-    console.log("\n📝 Primeiras 300 caracteres:");
-    console.log(saved?.value?.substring(0, 300) + "...");
+    console.log(`Verificacao: ${saved?.value?.length || 0} caracteres salvos`);
+    console.log(`Preview: ${saved?.value?.substring(0, 200)}...`);
   } catch (error) {
-    console.error("❌ Erro ao salvar system prompt:", error);
+    console.error("Erro ao salvar system prompt:", error);
   }
 }
 
-main();
+main().finally(() => prisma.$disconnect());
