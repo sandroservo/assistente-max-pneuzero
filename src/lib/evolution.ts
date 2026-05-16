@@ -55,6 +55,43 @@ export class EvolutionInvalidNumberError extends Error {
   }
 }
 
+// Cache de providerIds enviados pelo bot (TTL 90s).
+// Evolution reemite no webhook como fromMe=true; sem isso o webhook trata
+// como "atendente assumiu" e marca o lead como ownerType=human, calando o bot.
+const SENT_TTL_MS = 90_000;
+const recentSentIds = new Map<string, number>();
+
+function rememberSentId(id: unknown): void {
+  if (typeof id !== "string" || !id) return;
+  const now = Date.now();
+  // Prune expirados (cap baixo, set fica pequeno)
+  if (recentSentIds.size > 200) {
+    for (const [k, exp] of recentSentIds) if (exp < now) recentSentIds.delete(k);
+  }
+  recentSentIds.set(id, now + SENT_TTL_MS);
+}
+
+export function wasRecentBotSend(id: string | undefined | null): boolean {
+  if (!id) return false;
+  const exp = recentSentIds.get(id);
+  if (!exp) return false;
+  if (exp < Date.now()) {
+    recentSentIds.delete(id);
+    return false;
+  }
+  return true;
+}
+
+function extractSentId(data: unknown): string | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const obj = data as Record<string, unknown>;
+  const directKey = obj.key as { id?: unknown } | undefined;
+  if (directKey?.id && typeof directKey.id === "string") return directKey.id;
+  const wrapped = obj.data as { key?: { id?: unknown } } | undefined;
+  if (wrapped?.key?.id && typeof wrapped.key.id === "string") return wrapped.key.id;
+  return undefined;
+}
+
 export async function evolutionSendText({ number, text }: SendTextArgs) {
   const { baseUrl, instance, token } = await getEvolutionConfig();
 
@@ -96,7 +133,9 @@ export async function evolutionSendText({ number, text }: SendTextArgs) {
   }
 
   console.log("[Evolution] Message sent successfully");
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  rememberSentId(extractSentId(data));
+  return data;
 }
 
 /**
@@ -133,7 +172,9 @@ export async function evolutionSendAudio({ number, base64, mimeType }: { number:
   }
 
   console.log("[Evolution] Audio sent successfully");
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  rememberSentId(extractSentId(data));
+  return data;
 }
 
 /**
@@ -190,7 +231,9 @@ export async function evolutionSendMedia({
   }
 
   console.log("[Evolution] Media sent successfully");
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  rememberSentId(extractSentId(data));
+  return data;
 }
 
 /**
@@ -392,7 +435,9 @@ export async function evolutionSendTextWithQuote({
     console.error("[Evolution] Send quoted failed:", res.status, body);
     throw new Error(`Evolution sendTextWithQuote failed: ${res.status} ${body}`);
   }
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  rememberSentId(extractSentId(data));
+  return data;
 }
 
 /**
@@ -509,7 +554,9 @@ export async function evolutionSendContact({
     console.error("[Evolution] Send contact failed:", res.status, body);
     throw new Error(`Evolution sendContact failed: ${res.status} ${body}`);
   }
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  rememberSentId(extractSentId(data));
+  return data;
 }
 
 export async function evolutionSendTextHumanized({ number, text }: SendTextArgs) {

@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
-import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64, EvolutionInvalidNumberError } from "@/lib/evolution";
+import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64, EvolutionInvalidNumberError, wasRecentBotSend } from "@/lib/evolution";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { saveMedia } from "@/lib/media-storage";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
@@ -63,6 +63,13 @@ export async function POST(req: Request) {
     const pushName: string | undefined = payload?.data?.pushName;
     const instanceName: string | undefined = payload?.instance;
     const avatarUrl: string | undefined = payload?.data?.profilePictureUrl;
+
+    // Self-echo guard: Evolution reemite mensagens enviadas pelo bot como fromMe=true.
+    // Sem isso, webhook abaixo trata como "atendente assumiu" e cria handoff calando o bot.
+    // wasRecentBotSend compara providerId com cache populado em evolution.ts no envio.
+    if (fromMe && wasRecentBotSend(providerId)) {
+      return NextResponse.json({ ok: true, action: "self_echo" });
+    }
 
     const msg = payload?.data?.message ?? {};
     let text: string | undefined =
