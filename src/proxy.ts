@@ -27,6 +27,12 @@ export function proxy(request: NextRequest) {
     request.cookies.get("__Secure-authjs.session-token")?.value;
 
   if (!sessionToken) {
+    // Rotas /api/* devem retornar 401 explícito (não redirect).
+    // EventSource/fetch não seguem 3xx para HTML de login, e um redirect
+    // num endpoint SSE faz o cliente travar em "loading" sem disparar onerror.
+    if (pathname.startsWith("/api/")) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
