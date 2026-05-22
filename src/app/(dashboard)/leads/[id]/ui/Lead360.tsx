@@ -7,6 +7,7 @@
  * Ficha 360° do lead — Timeline + Veículos + Vendas + NPS + Follow-ups.
  */
 
+import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,8 @@ import {
   Phone,
   MapPin,
   Cake,
+  Calendar,
+  Bot,
   AlertTriangle,
 } from "lucide-react";
 
@@ -311,6 +314,7 @@ export function Lead360({ data }: { data: LeadData }) {
           <TabsTrigger value="veiculos"><Car className="w-4 h-4 mr-1" /> Veículos ({data.vehicles.length})</TabsTrigger>
           <TabsTrigger value="vendas"><DollarSign className="w-4 h-4 mr-1" /> Vendas ({data.sales.length})</TabsTrigger>
           <TabsTrigger value="nps"><Star className="w-4 h-4 mr-1" /> NPS ({data.nps.length})</TabsTrigger>
+          <TabsTrigger value="agendamentos"><Calendar className="w-4 h-4 mr-1" /> Agendamentos</TabsTrigger>
           <TabsTrigger value="followups"><Bell className="w-4 h-4 mr-1" /> Follow-ups ({data.followUps.length})</TabsTrigger>
         </TabsList>
 
@@ -426,6 +430,10 @@ export function Lead360({ data }: { data: LeadData }) {
           </div>
         </TabsContent>
 
+        <TabsContent value="agendamentos">
+          <LeadAppointments leadId={data.id} />
+        </TabsContent>
+
         <TabsContent value="followups">
           <div className="space-y-2">
             {data.followUps.length === 0 && (
@@ -448,6 +456,64 @@ export function Lead360({ data }: { data: LeadData }) {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+interface LeadAppointment {
+  id: string;
+  serviceName: string;
+  scheduledAt: string;
+  status: "pending" | "confirmed" | "done" | "cancelled" | "no_show";
+  source: "bot" | "human" | "user";
+  notes: string | null;
+}
+
+const APPT_STATUS_LABEL: Record<LeadAppointment["status"], string> = {
+  pending: "Pendente",
+  confirmed: "Confirmado",
+  done: "Concluído",
+  cancelled: "Cancelado",
+  no_show: "Não compareceu",
+};
+
+function LeadAppointments({ leadId }: { leadId: string }) {
+  const [items, setItems] = useState<LeadAppointment[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/appointments?leadId=${encodeURIComponent(leadId)}&limit=50`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled) setItems(j.appointments ?? []); })
+      .catch(() => { if (!cancelled) setItems([]); });
+    return () => { cancelled = true; };
+  }, [leadId]);
+
+  if (items === null) {
+    return <Card><CardContent className="p-5 text-sm text-gray-500">Carregando…</CardContent></Card>;
+  }
+  if (items.length === 0) {
+    return <Card><CardContent className="p-5 text-sm text-gray-500">Nenhum agendamento.</CardContent></Card>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((a) => (
+        <Card key={a.id}>
+          <CardContent className="p-4 flex flex-wrap items-center gap-3 text-sm">
+            <Badge variant={a.status === "cancelled" ? "destructive" : a.status === "done" ? "secondary" : "default"}>
+              {APPT_STATUS_LABEL[a.status]}
+            </Badge>
+            <span className="font-medium">{a.serviceName}</span>
+            <span className="text-gray-600">{new Date(a.scheduledAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              {a.source === "bot" ? <Bot className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
+              {a.source === "bot" ? "Max" : "Manual"}
+            </span>
+            {a.notes && <span className="text-xs text-gray-500 italic truncate max-w-xs">{a.notes}</span>}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

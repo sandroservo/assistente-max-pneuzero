@@ -12,6 +12,13 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { upsertVehicle } from "./vehicle";
 import { buscarProdutosPorDescricao } from "./pneuzero-stock";
+import {
+  parseDateTimePtBr,
+  createAppointment,
+  cancelAppointment,
+  formatBR,
+} from "./appointments";
+import { postBotToGeneral } from "./team-bot";
 
 export interface ToolContext {
   leadId: string;
@@ -106,6 +113,52 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "agendar_servico",
+      description:
+        "Cria agendamento de manutenção/serviço pro lead. USE APENAS APÓS confirmar verbalmente com o cliente a data, hora e serviço — passe `confirmadoPeloCliente=true` só se ele disse claramente 'sim, pode marcar' ou equivalente. Aceita data natural: 'amanhã 14h', 'sábado 10:00', '18/05 14h', '2026-05-18T14:00'. Posta alerta no canal Geral do chat interno automaticamente.",
+      parameters: {
+        type: "object",
+        properties: {
+          servico: {
+            type: "string",
+            description:
+              "Nome do serviço (ex: 'Alinhamento e balanceamento', 'Troca dos 4 pneus', 'Troca de óleo'). Use exatamente o que o cliente disse ou o item do catálogo.",
+          },
+          dataHora: {
+            type: "string",
+            description:
+              "Data e hora em texto natural ('sábado 14h', 'amanhã 10:00') ou ISO. Hora exata obrigatória.",
+          },
+          confirmadoPeloCliente: {
+            type: "boolean",
+            description: "true se o cliente confirmou data+hora+serviço claramente. NUNCA passe true sem confirmação.",
+          },
+          notas: { type: "string", description: "Observações adicionais (opcional)" },
+        },
+        required: ["servico", "dataHora", "confirmadoPeloCliente"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancelar_agendamento",
+      description:
+        "Cancela um agendamento existente do lead quando ele pedir para desmarcar/cancelar. Cancela o mais próximo no futuro a menos que ele especifique outro. Posta no canal Geral.",
+      parameters: {
+        type: "object",
+        properties: {
+          motivo: { type: "string", description: "Motivo curto (ex: 'cliente desmarcou via WhatsApp', 'conflito de horário')" },
+        },
+        required: ["motivo"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "transferir_humano",
       description:
         "Cria handoff para um vendedor humano. Use quando: lead pede atendente, lead pede agendamento concreto, cotação está pronta para fechamento, ou há dúvida técnica complexa.",
@@ -141,6 +194,17 @@ interface BuscarServicoArgs {
 interface TransferirHumanoArgs {
   motivo: string;
   resumo?: string;
+}
+
+interface AgendarServicoArgs {
+  servico: string;
+  dataHora: string;
+  confirmadoPeloCliente: boolean;
+  notas?: string;
+}
+
+interface CancelarAgendamentoArgs {
+  motivo: string;
 }
 
 interface BuscarEstoqueArgs {
@@ -179,6 +243,12 @@ export async function executeTool(
         break;
       case "buscar_estoque":
         result = await execBuscarEstoque(args as BuscarEstoqueArgs);
+        break;
+      case "agendar_servico":
+        result = await execAgendarServico(args as AgendarServicoArgs, ctx);
+        break;
+      case "cancelar_agendamento":
+        result = await execCancelarAgendamento(args as CancelarAgendamentoArgs, ctx);
         break;
       case "transferir_humano":
         result = await execTransferirHumano(args as TransferirHumanoArgs, ctx);
@@ -296,6 +366,105 @@ async function execBuscarEstoque(args: BuscarEstoqueArgs): Promise<string> {
         : produtos.every((p) => !p.disponivel)
           ? "Nenhum item com estoque positivo. Ofereça alternativa ou transferir para humano."
           : undefined,
+  });
+}
+
+async function execAgendarServico(args: AgendarServicoArgs, ctx: ToolContext): Promise<string> {
+  if (!args.confirmadoPeloCliente) {
+    return JSON.stringify({
+      ok: false,
+      error: "confirmacao_pendente",
+      message: "Não confirmou com o cliente. Repita os dados (serviço, data, hora) e pergunte se pode marcar. Só chame de novo após o 'sim'.",
+    });
+  }
+
+  const parsed = parseDateTimePtBr(args.dataHora);
+  if (!parsed) {
+    return JSON.stringify({
+      ok: false,
+      error: "data_invalida",
+      message: "Não entendi a data/hora. Peça pro cliente confirmar: dia + hora (ex: 'sábado às 14h' ou '18/05 14:00').",
+    });
+  }
+  if (parsed.date.getTime() < Date.now() - 60_000) {
+    return JSON.stringify({
+      ok: false,
+      error: "data_passada",
+      message: "Data informada já passou. Peça nova data ao cliente.",
+    });
+  }
+
+  const lead = await prisma.lead.findUnique({
+    where: { id: ctx.leadId },
+    select: { id: true, name: true, phone: true, vehicles: { orderBy: { createdAt: "desc" }, take: 1 } },
+  });
+  if (!lead) {
+    return JSON.stringify({ ok: false, error: "lead_nao_encontrado" });
+  }
+
+  const vehicle = lead.vehicles[0] ?? null;
+
+  const appt = await createAppointment({
+    organizationId: ctx.organizationId,
+    leadId: ctx.leadId,
+    serviceName: args.servico,
+    scheduledAt: parsed.date,
+    vehicleId: vehicle?.id ?? ctx.vehicleId,
+    notes: args.notas,
+    source: "bot",
+  });
+
+  // Alerta canal Geral (fire-and-forget — não bloqueia resposta)
+  const clienteNome = lead.name || lead.phone;
+  const veiculo = vehicle
+    ? `\n🚗 ${[vehicle.marca, vehicle.modelo, vehicle.ano].filter(Boolean).join(" ")}${vehicle.placa ? ` (${vehicle.placa})` : ""}`
+    : "";
+  void postBotToGeneral(
+    ctx.organizationId,
+    `🗓️ *Novo agendamento*\n👤 ${clienteNome}\n📞 ${lead.phone}\n🔧 ${args.servico}\n📅 ${formatBR(parsed.date)}${veiculo}${args.notas ? `\n📝 ${args.notas}` : ""}`
+  );
+
+  return JSON.stringify({
+    ok: true,
+    appointmentId: appt.id,
+    quando: formatBR(parsed.date),
+    servico: args.servico,
+    message: "Agendamento criado. Confirme pro cliente e fale que avisou o time.",
+  });
+}
+
+async function execCancelarAgendamento(args: CancelarAgendamentoArgs, ctx: ToolContext): Promise<string> {
+  const proximo = await prisma.appointment.findFirst({
+    where: {
+      leadId: ctx.leadId,
+      status: { in: ["pending", "confirmed"] },
+      scheduledAt: { gte: new Date() },
+    },
+    orderBy: { scheduledAt: "asc" },
+    include: { lead: { select: { name: true, phone: true } } },
+  });
+  if (!proximo) {
+    return JSON.stringify({
+      ok: false,
+      error: "nenhum_agendamento",
+      message: "Cliente não tem agendamento futuro ativo. Confirme com ele se é isso mesmo.",
+    });
+  }
+
+  await cancelAppointment(proximo.id, args.motivo);
+
+  const clienteNome = proximo.lead.name || proximo.lead.phone;
+  void postBotToGeneral(
+    ctx.organizationId,
+    `❌ *Agendamento cancelado*\n👤 ${clienteNome}\n📞 ${proximo.lead.phone}\n🔧 ${proximo.serviceName}\n📅 ${formatBR(proximo.scheduledAt)}\n📝 ${args.motivo}`
+  );
+
+  return JSON.stringify({
+    ok: true,
+    appointmentId: proximo.id,
+    quando: formatBR(proximo.scheduledAt),
+    servico: proximo.serviceName,
+    message: "Agendamento cancelado. Avise o cliente que está feito.",
   });
 }
 

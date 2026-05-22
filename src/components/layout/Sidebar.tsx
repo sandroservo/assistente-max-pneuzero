@@ -24,6 +24,7 @@ import {
   PanelLeft,
   Contact,
   MessagesSquare,
+  Calendar,
   Menu,
   X,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/chats", icon: MessageSquare, label: "Chats" },
   { href: "/equipe", icon: MessagesSquare, label: "Equipe" },
+  { href: "/agendamentos", icon: Calendar, label: "Agendamentos" },
   { href: "/contacts", icon: Contact, label: "Contatos" },
   { href: "/kanban", icon: ClipboardList, label: "Kanban" },
   { href: "/knowledge", icon: BookOpen, label: "Conhecimento" },

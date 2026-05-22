@@ -32,6 +32,20 @@ enum InstanceStatus {
   QRCODE
 }
 
+enum AppointmentStatus {
+  pending
+  confirmed
+  done
+  cancelled
+  no_show
+}
+
+enum AppointmentSource {
+  bot
+  human
+  user
+}
+
 model Organization {
   id           String   @id @default(cuid())
   name         String
@@ -54,6 +68,7 @@ model Organization {
   sales            Sale[]
   followUpRules    FollowUpRule[]
   teamMessages     TeamMessage[]
+  appointments     Appointment[]
 }
 
 model User {
@@ -76,6 +91,7 @@ model User {
   vendedorSales     Sale[]             @relation("VendedorSale")
   teamMessages      TeamMessage[]      @relation("TeamMessageAuthor")
   teamChannelStates TeamChannelState[]
+  appointments      Appointment[]      @relation("AppointmentCreatedBy")
 
   @@index([organizationId])
   @@index([email])
@@ -195,6 +211,7 @@ model Lead {
   quotes        Quote[]
   sales         Sale[]
   nps           NPSResponse[]
+  appointments  Appointment[]
 
   @@unique([organizationId, phone]) // Phone único por organização
   @@index([organizationId])
@@ -408,11 +425,12 @@ model Vehicle {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
-  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  quotes      Quote[]
-  sales       Sale[]
-  serviceLogs ServiceLog[]
-  followUps   FollowUp[]
+  lead         Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  quotes       Quote[]
+  sales        Sale[]
+  serviceLogs  ServiceLog[]
+  followUps    FollowUp[]
+  appointments Appointment[]
 
   @@index([leadId])
   @@index([placa])
@@ -437,8 +455,9 @@ model ServiceItem {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  category   ServiceCategory @relation(fields: [categoryId], references: [id])
-  quoteItems QuoteItem[]
+  category     ServiceCategory @relation(fields: [categoryId], references: [id])
+  quoteItems   QuoteItem[]
+  appointments Appointment[]
 
   @@index([categoryId])
   @@index([ativo])
@@ -620,6 +639,38 @@ model FollowUpRule {
   @@unique([organizationId, tipo])
   @@index([organizationId])
   @@index([tipo])
+}
+
+// Agendamento de manutenção/serviço. Criado pelo Max (bot) ao confirmar com cliente,
+// ou criado manualmente por atendente. Status default = "confirmed" — Max sempre
+// confirma com o cliente antes de gravar.
+model Appointment {
+  id             String            @id @default(cuid())
+  organizationId String
+  leadId         String
+  vehicleId      String?
+  serviceItemId  String?
+  serviceName    String // snapshot do nome ("Alinhamento 3D")
+  scheduledAt    DateTime
+  status         AppointmentStatus @default(confirmed)
+  notes          String?           @db.Text
+  source         AppointmentSource @default(human)
+  createdById    String? // userId do atendente que criou (null se source=bot)
+  reminderSentAt DateTime? // marcador do cron de lembrete 24h
+  cancelledAt    DateTime?
+  cancelReason   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle?     @relation(fields: [vehicleId], references: [id])
+  serviceItem  ServiceItem? @relation(fields: [serviceItemId], references: [id])
+  createdBy    User?        @relation(name: "AppointmentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([organizationId, scheduledAt])
+  @@index([leadId, scheduledAt])
+  @@index([status, scheduledAt])
 }
 
 // Chat interno entre vendedores: canal "Geral" (dmKey null) e DMs (dmKey = "minId_maxId").
