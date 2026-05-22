@@ -12,7 +12,7 @@ import type { NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const publicRoutes = ["/login", "/register", "/api/auth", "/api/webhooks", "/api/asaas", "/api/followups/run"];
+  const publicRoutes = ["/login", "/register", "/api/auth", "/api/webhooks", "/api/asaas", "/api/followups/run", "/api/cron"];
   const publicFiles = ["/manifest.json", "/robots.txt", "/sitemap.xml", "/favicon.ico"];
   const isPublicRoute =
     publicRoutes.some((route) => pathname.startsWith(route)) ||
