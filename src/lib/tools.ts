@@ -522,9 +522,22 @@ async function execTransferirHumano(
     data: { status: "HUMANO_SOLICITADO" },
   });
 
+  // Alerta vendedores no canal Geral do /equipe (fire-and-forget)
+  const lead = await prisma.lead.findUnique({
+    where: { id: ctx.leadId },
+    select: { name: true, phone: true },
+  });
+  if (lead) {
+    const clienteNome = lead.name || lead.phone;
+    void postBotToGeneral(
+      ctx.organizationId,
+      `🆘 *Transferência para humano*\n👤 ${clienteNome}\n📞 ${lead.phone}\n💬 Motivo: ${args.motivo}${args.resumo ? `\n📝 ${args.resumo}` : ""}`
+    );
+  }
+
   return JSON.stringify({
     ok: true,
     handoffId: handoff.id,
-    message: "Handoff criado. Avise o cliente que vai transferir.",
+    message: "Handoff criado. Avise o cliente que vai transferir. Time já notificado no /equipe.",
   });
 }
