@@ -72,15 +72,16 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "buscar_servico",
       description:
-        "Busca serviços do catálogo Pneuzero por categoria ou termo. Use antes de citar preço ou detalhar um serviço.",
+        "Busca serviços do catálogo Pneuzero por categoria OU termo. PREFIRA 'termo' (palavra-chave do nome/descrição do serviço — ex: 'troca de óleo', 'alinhamento', 'pastilha'). Use 'categoria' SÓ se souber o nome exato da categoria do catálogo (ex: 'Óleo', 'Suspensão', 'Freios', 'Alinhamento'). Quando em dúvida, passe só 'termo'.",
       parameters: {
         type: "object",
         properties: {
           categoria: {
             type: "string",
-            description: "Categoria do serviço",
+            description:
+              "Nome EXATO da categoria do catálogo (ex: 'Óleo', 'Freios'). Se passar nome de serviço aqui, vai falhar — use 'termo' em vez disso.",
           },
-          termo: { type: "string", description: "Palavra-chave de busca" },
+          termo: { type: "string", description: "Palavra-chave que aparece no nome/descrição do serviço (ex: 'troca de óleo', 'alinhamento 3D'). Mais robusto que categoria." },
         },
         additionalProperties: false,
       },
@@ -127,7 +128,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           dataHora: {
             type: "string",
             description:
-              "Data e hora em texto natural ('sábado 14h', 'amanhã 10:00') ou ISO. Hora exata obrigatória.",
+              "Data e hora em texto natural PT-BR ('sábado 14h', 'amanhã 10:00', '18/05 14h') OU ISO completo com ANO ATUAL ou próximo (NUNCA 2023/2024 — consulte a 'DATA E HORA ATUAL' injetada pelo sistema). Hora exata obrigatória. Em texto natural, ano não precisa — sistema infere do contexto temporal.",
           },
           confirmadoPeloCliente: {
             type: "boolean",
@@ -312,21 +313,37 @@ async function execBuscarPneu(args: BuscarPneuArgs): Promise<string> {
 }
 
 async function execBuscarServico(args: BuscarServicoArgs): Promise<string> {
-  const where: Prisma.ServiceItemWhereInput = { ativo: true };
-  if (args.categoria) {
-    where.category = { nome: { equals: args.categoria, mode: "insensitive" } };
+  // Estratégia: busca primeira tentativa categoria+termo. Se vazio e categoria
+  // foi passada, faz fallback tratando categoria como termo (modelo confunde
+  // "Troca de Óleo" como categoria quando na verdade é nome do serviço).
+  const fetchWith = async (cat?: string, term?: string) => {
+    const where: Prisma.ServiceItemWhereInput = { ativo: true };
+    if (cat) where.category = { nome: { contains: cat, mode: "insensitive" } };
+    if (term) {
+      where.OR = [
+        { nome: { contains: term, mode: "insensitive" } },
+        { descricao: { contains: term, mode: "insensitive" } },
+        { category: { nome: { contains: term, mode: "insensitive" } } },
+      ];
+    }
+    return prisma.serviceItem.findMany({
+      where,
+      take: 10,
+      include: { category: { select: { nome: true } } },
+    });
+  };
+
+  let services = await fetchWith(args.categoria, args.termo);
+
+  // Fallback 1: categoria não bateu e nada veio → tenta categoria como termo
+  if (services.length === 0 && args.categoria && !args.termo) {
+    services = await fetchWith(undefined, args.categoria);
   }
-  if (args.termo) {
-    where.OR = [
-      { nome: { contains: args.termo, mode: "insensitive" } },
-      { descricao: { contains: args.termo, mode: "insensitive" } },
-    ];
+  // Fallback 2: ambos vazios → ignora categoria, busca só por termo
+  if (services.length === 0 && args.categoria && args.termo) {
+    services = await fetchWith(undefined, args.termo);
   }
-  const services = await prisma.serviceItem.findMany({
-    where,
-    take: 10,
-    include: { category: { select: { nome: true } } },
-  });
+
   return JSON.stringify({
     total: services.length,
     servicos: services.map((s) => ({
@@ -338,6 +355,10 @@ async function execBuscarServico(args: BuscarServicoArgs): Promise<string> {
       garantiaDias: s.garantiaDias,
       duracaoMin: s.duracaoMin,
     })),
+    aviso:
+      services.length === 0
+        ? "Nenhum serviço encontrado com esse filtro. Tente com 'termo' (ex: 'óleo', 'alinhamento') em vez de 'categoria'."
+        : undefined,
   });
 }
 
@@ -387,10 +408,12 @@ async function execAgendarServico(args: AgendarServicoArgs, ctx: ToolContext): P
     });
   }
   if (parsed.date.getTime() < Date.now() - 60_000) {
+    const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const recebida = parsed.date.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
     return JSON.stringify({
       ok: false,
       error: "data_passada",
-      message: "Data informada já passou. Peça nova data ao cliente.",
+      message: `Data ${recebida} já passou (agora é ${agora}). REVISE O ANO — provavelmente está usando ano antigo. Use o ano atual ou próximo. Peça pro cliente confirmar dia e hora e tente de novo com ISO YYYY-MM-DD usando o ano correto.`,
     });
   }
 

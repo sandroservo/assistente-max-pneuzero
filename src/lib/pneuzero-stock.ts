@@ -64,10 +64,12 @@ export async function buscarProdutosPorDescricao(
   const timeoutId = setTimeout(() => ctrl.abort(), 15_000);
 
   try {
+    // charset=utf-8 OBRIGATÓRIO: ngrok gateway repassa pro ODBC SQL Server. Sem
+    // charset, latin1/cp1252 padrão corrompe acentos (ã, ç, Ó) — quebra LIKE.
     const res = await fetch(`${API_URL.replace(/\/$/, "")}/api/query`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=utf-8",
         "X-API-Key": API_KEY,
         "ngrok-skip-browser-warning": "1",
       },

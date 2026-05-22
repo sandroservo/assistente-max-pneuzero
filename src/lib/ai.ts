@@ -233,8 +233,27 @@ export async function generateAIResponse(
       context.leadName = extractedName;
     }
 
+    // Contexto temporal — LLM tem cutoff de treino antigo e aluci
+    // datas (ex: 2023 em 2026). Sem isso, agendar_servico recebe ano errado.
+    const nowBrt = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      weekday: "long",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+    const isoNow = new Date().toISOString();
+
     const messages: Message[] = [
       { role: "system", content: systemPrompt },
+      {
+        role: "system",
+        content:
+          `DATA E HORA ATUAL (use SEMPRE como referência — NÃO use 2023, 2024, 2025): ${nowBrt} (ISO ${isoNow}, fuso America/Sao_Paulo).\n` +
+          `Quando o cliente disser "amanhã", "sábado", "semana que vem", calcule a partir DESTA data. Ao chamar agendar_servico, passe data no formato ISO completo com o ano correto (atual ou próximo se a data já passou no ano atual).`,
+      },
     ];
 
     // Adiciona Tool Information (base de conhecimento) — Max DEVE consultar para serviços, pneus, preços, garantias, endereços.
