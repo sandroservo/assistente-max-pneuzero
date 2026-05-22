@@ -226,12 +226,15 @@ export function AgendamentosClient() {
 }
 
 interface CreateLead { id: string; name: string | null; phone: string }
+interface CatalogService { id: string; nome: string; categoria: string; precoBase: string | null; duracaoMin: number | null }
 
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [leads, setLeads] = useState<CreateLead[]>([]);
   const [leadQ, setLeadQ] = useState("");
   const [leadId, setLeadId] = useState("");
-  const [serviceName, setServiceName] = useState("");
+  const [services, setServices] = useState<CatalogService[]>([]);
+  const [serviceItemId, setServiceItemId] = useState("");
+  const [customServiceName, setCustomServiceName] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -248,14 +251,40 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     return () => clearTimeout(t);
   }, [leadQ]);
 
+  useEffect(() => {
+    fetch("/api/services", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setServices(j.services ?? []))
+      .catch(() => setServices([]));
+  }, []);
+
+  const groupedServices = useMemo(() => {
+    const map = new Map<string, CatalogService[]>();
+    for (const s of services) {
+      const arr = map.get(s.categoria) ?? [];
+      arr.push(s);
+      map.set(s.categoria, arr);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [services]);
+
+  const selectedService = services.find((s) => s.id === serviceItemId);
+  const finalServiceName = serviceItemId === "__custom__" ? customServiceName.trim() : selectedService?.nome ?? "";
+
   const save = async () => {
-    if (!leadId || !serviceName || !scheduledAt) return;
+    if (!leadId || !finalServiceName || !scheduledAt) return;
     setSaving(true);
     try {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, serviceName, scheduledAt: new Date(scheduledAt).toISOString(), notes: notes || undefined }),
+        body: JSON.stringify({
+          leadId,
+          serviceName: finalServiceName,
+          serviceItemId: serviceItemId && serviceItemId !== "__custom__" ? serviceItemId : undefined,
+          scheduledAt: new Date(scheduledAt).toISOString(),
+          notes: notes || undefined,
+        }),
       });
       if (res.ok) onCreated();
       else alert("Erro ao salvar");
@@ -299,13 +328,34 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Serviço</label>
-            <input
-              type="text"
-              placeholder="Ex: Alinhamento + balanceamento"
-              value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-            />
+            <select
+              value={serviceItemId}
+              onChange={(e) => setServiceItemId(e.target.value)}
+              className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            >
+              <option value="">Selecione o serviço…</option>
+              {groupedServices.map(([cat, items]) => (
+                <optgroup key={cat} label={cat}>
+                  {items.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nome}
+                      {s.precoBase ? ` — R$ ${s.precoBase}` : ""}
+                      {s.duracaoMin ? ` (${s.duracaoMin}min)` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+              <option value="__custom__">— Outro (digitar nome) —</option>
+            </select>
+            {serviceItemId === "__custom__" && (
+              <input
+                type="text"
+                placeholder="Nome do serviço"
+                value={customServiceName}
+                onChange={(e) => setCustomServiceName(e.target.value)}
+                className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            )}
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Data e hora</label>
@@ -328,7 +378,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           <button
             type="button"
             onClick={save}
-            disabled={!leadId || !serviceName || !scheduledAt || saving}
+            disabled={!leadId || !finalServiceName || !scheduledAt || saving}
             className="w-full bg-[#CC0000] text-white py-2 rounded-lg font-medium disabled:opacity-50 hover:bg-red-700"
           >
             {saving ? "Salvando…" : "Criar agendamento"}
