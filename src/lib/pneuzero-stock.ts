@@ -2,78 +2,81 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * Cliente da API externa Pneuzero (Flasgger SQL gateway).
- * Consulta tabela `produto` do ERP por descrição e retorna estoque atual.
+ * Cliente da API externa Pneuzero — endpoint otimizado /api/products.
+ * Substitui a query SQL manual: usa GET /api/products com search + fields +
+ * pagination, aproveita cache de 2min da API + compressão GZIP + connection
+ * pooling no lado servidor. Campos amigáveis: id, codigo, descricao, estoque.
  */
 
 const API_URL = process.env.PNEUZERO_API_URL;
 const API_KEY = process.env.PNEUZERO_API_KEY;
-const DATABASE = process.env.PNEUZERO_API_DATABASE ?? "MAX";
 
 export interface ProdutoEstoque {
-  proDescricao: string;
-  zzz_proEstoqueAtual: number;
+  id: number;
+  codigo: string | null;
+  proDescricao: string; // mantém nome legado pra callers existentes
+  zzz_proEstoqueAtual: number; // mantém nome legado
 }
 
-interface QueryResponse {
-  data?: ProdutoEstoque[];
+interface ProductsResponse {
+  data?: Array<{
+    id?: number;
+    codigo?: string | null;
+    descricao?: string;
+    estoque?: number;
+  }>;
   error?: string;
-  row_count?: number;
+  total?: number;
+  total_pages?: number;
+  page?: number;
+  per_page?: number;
 }
 
-function escapeSqlLike(termo: string): string {
-  // SQL Server: escape ' (dobra), e wildcards [ % _ via colchetes para LIKE literal
-  return termo
-    .replace(/'/g, "''")
-    .replace(/\[/g, "[[]")
-    .replace(/%/g, "[%]")
-    .replace(/_/g, "[_]");
+interface SearchOptions {
+  limit?: number;
+  apenasDisponivel?: boolean; // filtra estoque > 0 (usa in_stock=true)
+  orderBy?: "id" | "codigo" | "descricao" | "estoque";
+  orderDir?: "ASC" | "DESC";
 }
 
 export async function buscarProdutosPorDescricao(
   termo: string,
-  limit = 30
-): Promise<{ ok: true; produtos: ProdutoEstoque[] } | { ok: false; error: string }> {
+  limitOrOpts: number | SearchOptions = 30
+): Promise<{ ok: true; produtos: ProdutoEstoque[]; total: number } | { ok: false; error: string }> {
   if (!API_URL || !API_KEY) {
     return { ok: false, error: "Pneuzero API não configurada (PNEUZERO_API_URL/PNEUZERO_API_KEY)" };
   }
 
+  const opts: SearchOptions =
+    typeof limitOrOpts === "number" ? { limit: limitOrOpts } : limitOrOpts;
   const cleaned = termo.trim().slice(0, 120);
   if (!cleaned) {
     return { ok: false, error: "Termo vazio" };
   }
 
-  // Quebra em palavras (cada uma vira AND LIKE) — pega "filtro ar tecfil" em qualquer ordem.
-  // Drops palavras < 2 chars e limita a 6 palavras pra evitar query degenerada.
-  const palavras = cleaned
-    .split(/\s+/)
-    .map((p) => p.trim())
-    .filter((p) => p.length >= 2)
-    .slice(0, 6);
+  const perPage = Math.min(Math.max(opts.limit ?? 30, 1), 500);
+  const params = new URLSearchParams({
+    search: cleaned,
+    per_page: String(perPage),
+    fields: "id,codigo,descricao,estoque",
+    order_by: opts.orderBy ?? "descricao",
+    order_dir: opts.orderDir ?? "ASC",
+  });
+  if (opts.apenasDisponivel) params.set("in_stock", "true");
 
-  const safeWords = (palavras.length > 0 ? palavras : [cleaned]).map(escapeSqlLike);
-  const whereClauses = safeWords.map((w) => `proDescricao LIKE '%${w}%'`).join(" AND ");
-  const safeFull = escapeSqlLike(cleaned);
-  const top = Math.min(Math.max(limit, 1), 50);
-
-  // Prioriza: 1) match exato, 2) começa com termo, 3) contém termo completo, 4) demais.
-  // Dentro de cada grupo: estoque positivo primeiro, depois alfabético.
-  const sql = `SELECT TOP ${top} proDescricao, zzz_proEstoqueAtual FROM produto WHERE ${whereClauses} ORDER BY CASE WHEN proDescricao = '${safeFull}' THEN 0 WHEN proDescricao LIKE '${safeFull}%' THEN 1 WHEN proDescricao LIKE '%${safeFull}%' THEN 2 ELSE 3 END, CASE WHEN zzz_proEstoqueAtual > 0 THEN 0 ELSE 1 END, proDescricao`;
-
+  const url = `${API_URL.replace(/\/$/, "")}/api/products?${params.toString()}`;
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(), 15_000);
 
   try {
-    // charset=utf-8 OBRIGATÓRIO: ngrok gateway repassa pro ODBC SQL Server. Sem
-    // charset, latin1/cp1252 padrão corrompe acentos (ã, ç, Ó) — quebra LIKE.
-    const res = await fetch(`${API_URL.replace(/\/$/, "")}/api/query`, {
-      method: "POST",
+    const res = await fetch(url, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json; charset=utf-8",
         "X-API-Key": API_KEY,
+        "Accept-Encoding": "gzip",
+        "Accept": "application/json",
         "ngrok-skip-browser-warning": "1",
       },
-      body: JSON.stringify({ database: DATABASE, sql, max_rows: top }),
       signal: ctrl.signal,
     });
 
@@ -82,12 +85,64 @@ export async function buscarProdutosPorDescricao(
       return { ok: false, error: `HTTP ${res.status}: ${txt.slice(0, 200)}` };
     }
 
-    const json = (await res.json()) as QueryResponse;
+    const json = (await res.json()) as ProductsResponse;
     if (json.error) return { ok: false, error: json.error };
-    return { ok: true, produtos: json.data ?? [] };
+    const items = json.data ?? [];
+    const produtos: ProdutoEstoque[] = items.map((p) => ({
+      id: Number(p.id ?? 0),
+      codigo: p.codigo ?? null,
+      proDescricao: p.descricao ?? "",
+      zzz_proEstoqueAtual: Number(p.estoque ?? 0),
+    }));
+    return { ok: true, produtos, total: json.total ?? produtos.length };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `Falha ao consultar Pneuzero API: ${msg}` };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Busca rápida por ID — útil pra confirmar produto específico antes de cotar.
+ */
+export async function buscarProdutoPorId(
+  id: number
+): Promise<{ ok: true; produto: ProdutoEstoque } | { ok: false; error: string }> {
+  if (!API_URL || !API_KEY) {
+    return { ok: false, error: "Pneuzero API não configurada" };
+  }
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(() => ctrl.abort(), 10_000);
+  try {
+    const res = await fetch(`${API_URL.replace(/\/$/, "")}/api/products/${id}`, {
+      headers: {
+        "X-API-Key": API_KEY,
+        "Accept-Encoding": "gzip",
+        "Accept": "application/json",
+        "ngrok-skip-browser-warning": "1",
+      },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      return { ok: false, error: `HTTP ${res.status}: ${txt.slice(0, 200)}` };
+    }
+    const json = (await res.json()) as { data?: { id?: number; codigo?: string | null; descricao?: string; estoque?: number }; error?: string };
+    if (json.error || !json.data) return { ok: false, error: json.error ?? "produto não encontrado" };
+    const p = json.data;
+    return {
+      ok: true,
+      produto: {
+        id: Number(p.id ?? id),
+        codigo: p.codigo ?? null,
+        proDescricao: p.descricao ?? "",
+        zzz_proEstoqueAtual: Number(p.estoque ?? 0),
+      },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `Falha: ${msg}` };
   } finally {
     clearTimeout(timeoutId);
   }

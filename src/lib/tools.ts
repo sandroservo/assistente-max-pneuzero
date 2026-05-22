@@ -103,7 +103,11 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
           limite: {
             type: "integer",
-            description: "Máximo de produtos retornados (1-50, padrão 20).",
+            description: "Máximo de produtos retornados (1-500, padrão 20).",
+          },
+          apenasDisponivel: {
+            type: "boolean",
+            description: "true para filtrar somente itens com estoque > 0 (recomendado quando o cliente quer comprar agora). false (padrão) traz tudo incluindo zerados.",
           },
         },
         required: ["termo"],
@@ -211,6 +215,7 @@ interface CancelarAgendamentoArgs {
 interface BuscarEstoqueArgs {
   termo: string;
   limite?: number;
+  apenasDisponivel?: boolean;
 }
 
 interface RegistrarVeiculoArgs {
@@ -363,7 +368,10 @@ async function execBuscarServico(args: BuscarServicoArgs): Promise<string> {
 }
 
 async function execBuscarEstoque(args: BuscarEstoqueArgs): Promise<string> {
-  const result = await buscarProdutosPorDescricao(args.termo, args.limite ?? 20);
+  const result = await buscarProdutosPorDescricao(args.termo, {
+    limit: args.limite ?? 20,
+    apenasDisponivel: args.apenasDisponivel === true,
+  });
   if (!result.ok) {
     return JSON.stringify({
       ok: false,
@@ -372,6 +380,8 @@ async function execBuscarEstoque(args: BuscarEstoqueArgs): Promise<string> {
     });
   }
   const produtos = result.produtos.map((p) => ({
+    id: p.id,
+    codigo: p.codigo,
     descricao: p.proDescricao,
     estoque: p.zzz_proEstoqueAtual,
     disponivel: p.zzz_proEstoqueAtual > 0,
@@ -379,7 +389,8 @@ async function execBuscarEstoque(args: BuscarEstoqueArgs): Promise<string> {
   return JSON.stringify({
     ok: true,
     termo: args.termo,
-    total: produtos.length,
+    total: result.total,
+    retornados: produtos.length,
     produtos,
     aviso:
       produtos.length === 0
