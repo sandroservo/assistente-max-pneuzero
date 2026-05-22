@@ -18,18 +18,21 @@ export interface ProdutoEstoque {
   zzz_proEstoqueAtual: number; // mantém nome legado
 }
 
+interface ProductRow {
+  id?: number;
+  codigo?: string | null;
+  descricao?: string;
+  estoque?: number;
+}
+
 interface ProductsResponse {
-  data?: Array<{
-    id?: number;
-    codigo?: string | null;
-    descricao?: string;
-    estoque?: number;
-  }>;
-  error?: string;
+  // Resposta real da API: `products` + `pagination.total`.
+  // Mantém `data`/`total` como fallback caso doc mude.
+  products?: ProductRow[];
+  data?: ProductRow[];
+  pagination?: { total?: number; total_pages?: number; page?: number; per_page?: number; has_next?: boolean; has_prev?: boolean };
   total?: number;
-  total_pages?: number;
-  page?: number;
-  per_page?: number;
+  error?: string;
 }
 
 interface SearchOptions {
@@ -87,14 +90,15 @@ export async function buscarProdutosPorDescricao(
 
     const json = (await res.json()) as ProductsResponse;
     if (json.error) return { ok: false, error: json.error };
-    const items = json.data ?? [];
+    const items = json.products ?? json.data ?? [];
+    const total = json.pagination?.total ?? json.total ?? items.length;
     const produtos: ProdutoEstoque[] = items.map((p) => ({
       id: Number(p.id ?? 0),
       codigo: p.codigo ?? null,
       proDescricao: p.descricao ?? "",
       zzz_proEstoqueAtual: Number(p.estoque ?? 0),
     }));
-    return { ok: true, produtos, total: json.total ?? produtos.length };
+    return { ok: true, produtos, total };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `Falha ao consultar Pneuzero API: ${msg}` };
@@ -128,9 +132,11 @@ export async function buscarProdutoPorId(
       const txt = await res.text().catch(() => "");
       return { ok: false, error: `HTTP ${res.status}: ${txt.slice(0, 200)}` };
     }
-    const json = (await res.json()) as { data?: { id?: number; codigo?: string | null; descricao?: string; estoque?: number }; error?: string };
-    if (json.error || !json.data) return { ok: false, error: json.error ?? "produto não encontrado" };
-    const p = json.data;
+    // API retorna o objeto direto (não envelopado em `data`). Mantém fallback.
+    const raw = (await res.json()) as ProductRow & { data?: ProductRow; error?: string };
+    if (raw.error) return { ok: false, error: raw.error };
+    const p: ProductRow = raw.data ?? raw;
+    if (p.id == null && p.descricao == null) return { ok: false, error: "produto não encontrado" };
     return {
       ok: true,
       produto: {
