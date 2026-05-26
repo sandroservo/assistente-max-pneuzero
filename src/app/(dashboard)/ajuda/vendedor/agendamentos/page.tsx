@@ -14,9 +14,9 @@ export default function AgendamentosTutorial() {
         no WhatsApp.
       </P>
 
-      <HelpImage src="/ajuda/agendamentos-lista.png" alt="Lista de agendamentos" caption="Lista /agendamentos — agrupada por dia, com hora destacada em vermelho" />
+      <HelpImage src="/ajuda/agendamentos-lista.png" videoSrc="/ajuda/agendamentos-lista.webm" alt="Lista de agendamentos" caption="Lista /agendamentos — agrupada por dia, com hora destacada em vermelho" />
 
-      <HelpImage src="/ajuda/agendamentos-modal.png" alt="Modal Novo agendamento" caption="Modal 'Novo agendamento' — busca de cliente + selectbox de serviços do catálogo" />
+      <HelpImage src="/ajuda/agendamentos-modal.png" videoSrc="/ajuda/agendamentos-modal.webm" alt="Modal Novo agendamento" caption="Modal 'Novo agendamento' — busca de cliente + selectbox de serviços do catálogo" />
 
       <Section title="Criar agendamento manual">
         <Step n={1} title="Clique em 'Novo agendamento'">

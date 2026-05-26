@@ -121,33 +121,48 @@ export function ImagePlaceholder({ caption }: { caption?: string }) {
 }
 
 /**
- * Screenshot real capturado por scripts/capture-help-screens.ts.
- * Path padrão: /ajuda/<slug>.png (servido de /public/ajuda).
- * Se o arquivo não existir, renderiza fallback elegante (não quebra a página).
+ * Screenshot/vídeo capturado por scripts/capture-help-screens.ts.
+ * - `src`: PNG estático (sempre presente, usado como poster do vídeo)
+ * - `videoSrc` (opcional): WebM curto com auto-play loop muted
+ * Se a imagem não carregar, renderiza fallback sem quebrar layout.
  */
-export function HelpImage({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
+export function HelpImage({ src, alt, caption, videoSrc }: { src: string; alt: string; caption?: string; videoSrc?: string }) {
   return (
     <figure className="my-5">
       <div className="rounded-lg border border-gray-200 bg-gray-50 overflow-hidden shadow-sm">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          loading="lazy"
-          className="block w-full h-auto"
-          onError={(e) => {
-            const img = e.currentTarget;
-            img.style.display = "none";
-            const parent = img.parentElement;
-            if (parent && !parent.querySelector("[data-fallback]")) {
-              const fb = document.createElement("div");
-              fb.setAttribute("data-fallback", "true");
-              fb.className = "p-8 text-center text-sm text-gray-500";
-              fb.textContent = "Screenshot ainda não disponível — rode scripts/capture-help-screens.ts";
-              parent.appendChild(fb);
-            }
-          }}
-        />
+        {videoSrc ? (
+          <video
+            src={videoSrc}
+            poster={src}
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls
+            className="block w-full h-auto"
+            aria-label={alt}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            className="block w-full h-auto"
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.style.display = "none";
+              const parent = img.parentElement;
+              if (parent && !parent.querySelector("[data-fallback]")) {
+                const fb = document.createElement("div");
+                fb.setAttribute("data-fallback", "true");
+                fb.className = "p-8 text-center text-sm text-gray-500";
+                fb.textContent = "Screenshot ainda não disponível — rode scripts/capture-help-screens.ts";
+                parent.appendChild(fb);
+              }
+            }}
+          />
+        )}
       </div>
       {caption && <figcaption className="text-xs text-gray-500 text-center mt-2 italic">{caption}</figcaption>}
     </figure>

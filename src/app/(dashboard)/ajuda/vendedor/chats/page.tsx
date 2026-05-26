@@ -13,7 +13,7 @@ export default function ChatsTutorial() {
         e badge de não lidas. O cabeçalho de cada lead exibe nome, telefone, score e quem está dono da conversa (bot ou humano).
       </P>
 
-      <HelpImage src="/ajuda/chats-inbox.png" alt="Inbox /chats" caption="Inbox /chats — sidebar de conversas à esquerda, conversa selecionada à direita" />
+      <HelpImage src="/ajuda/chats-inbox.png" videoSrc="/ajuda/chats-inbox.webm" alt="Inbox /chats" caption="Inbox /chats — sidebar de conversas à esquerda, conversa selecionada à direita" />
 
       <Section title="Como abrir uma conversa">
         <Step n={1} title="Vá em Chats no menu lateral">

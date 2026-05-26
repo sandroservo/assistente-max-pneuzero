@@ -14,7 +14,7 @@ export default function KanbanTutorial() {
         completa de um cliente — vida toda dele com a Pneuzero.
       </P>
 
-      <HelpImage src="/ajuda/kanban.png" alt="Kanban de leads" caption="Kanban — colunas de status com cartões de leads que podem ser arrastados" />
+      <HelpImage src="/ajuda/kanban.png" videoSrc="/ajuda/kanban.webm" alt="Kanban de leads" caption="Kanban — colunas de status com cartões de leads que podem ser arrastados" />
 
       <Section title="Como ler o Kanban">
         <Checklist
