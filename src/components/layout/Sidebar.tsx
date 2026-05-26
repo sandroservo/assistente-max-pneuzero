@@ -25,6 +25,7 @@ import {
   Contact,
   MessagesSquare,
   Calendar,
+  Headphones,
   Menu,
   X,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const navItems = [
   { href: "/users", icon: Users, label: "Usuários" },
   { href: "/reports", icon: BarChart3, label: "Relatórios" },
   { href: "/settings", icon: Settings, label: "Configurações" },
+  { href: "/ajuda", icon: Headphones, label: "Ajuda" },
 ];
 
 export function Sidebar() {
