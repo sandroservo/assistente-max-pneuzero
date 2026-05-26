@@ -3,7 +3,7 @@
  * Site: https://cloudservo.com.br
  */
 
-import { Article, P, Section, Step, Tip, Note, ImagePlaceholder } from "@/components/ajuda/Article";
+import { Article, P, Section, Step, Tip, Note, HelpImage } from "@/components/ajuda/Article";
 
 export default function EquipeTutorial() {
   return (
@@ -16,7 +16,7 @@ export default function EquipeTutorial() {
         <li><strong>PV (mensagem privada)</strong> — 1-a-1 com qualquer outro vendedor</li>
       </ul>
 
-      <ImagePlaceholder caption="Tela /equipe — sidebar com Geral + lista de vendedores, conversa ao centro" />
+      <HelpImage src="/ajuda/equipe.png" alt="/equipe chat interno" caption="Tela /equipe — sidebar com Geral + lista de vendedores, conversa ao centro" />
 
       <Section title="Mandar mensagem no canal Geral">
         <Step n={1} title="Abra /equipe no menu lateral">

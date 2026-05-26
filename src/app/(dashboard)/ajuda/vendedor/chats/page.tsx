@@ -3,7 +3,7 @@
  * Site: https://cloudservo.com.br
  */
 
-import { Article, P, Section, Step, Tip, Note, Checklist, ImagePlaceholder } from "@/components/ajuda/Article";
+import { Article, P, Section, Step, Tip, Note, Checklist, HelpImage } from "@/components/ajuda/Article";
 
 export default function ChatsTutorial() {
   return (
@@ -13,7 +13,7 @@ export default function ChatsTutorial() {
         e badge de não lidas. O cabeçalho de cada lead exibe nome, telefone, score e quem está dono da conversa (bot ou humano).
       </P>
 
-      <ImagePlaceholder caption="Tela da Inbox /chats — sidebar de conversas à esquerda, conversa selecionada à direita" />
+      <HelpImage src="/ajuda/chats-inbox.png" alt="Inbox /chats" caption="Inbox /chats — sidebar de conversas à esquerda, conversa selecionada à direita" />
 
       <Section title="Como abrir uma conversa">
         <Step n={1} title="Vá em Chats no menu lateral">

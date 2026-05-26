@@ -3,7 +3,7 @@
  * Site: https://cloudservo.com.br
  */
 
-import { Article, P, Section, Step, Tip, Note, ImagePlaceholder, Checklist } from "@/components/ajuda/Article";
+import { Article, P, Section, Step, Tip, Note, HelpImage, Checklist } from "@/components/ajuda/Article";
 
 export default function AgendamentosTutorial() {
   return (
@@ -14,7 +14,9 @@ export default function AgendamentosTutorial() {
         no WhatsApp.
       </P>
 
-      <ImagePlaceholder caption="Lista /agendamentos — agrupada por dia, com hora destacada em vermelho" />
+      <HelpImage src="/ajuda/agendamentos-lista.png" alt="Lista de agendamentos" caption="Lista /agendamentos — agrupada por dia, com hora destacada em vermelho" />
+
+      <HelpImage src="/ajuda/agendamentos-modal.png" alt="Modal Novo agendamento" caption="Modal 'Novo agendamento' — busca de cliente + selectbox de serviços do catálogo" />
 
       <Section title="Criar agendamento manual">
         <Step n={1} title="Clique em 'Novo agendamento'">

@@ -3,7 +3,7 @@
  * Site: https://cloudservo.com.br
  */
 
-import { Article, P, Section, Step, Tip, ImagePlaceholder, Checklist } from "@/components/ajuda/Article";
+import { Article, P, Section, Step, Tip, HelpImage, Checklist } from "@/components/ajuda/Article";
 
 export default function KanbanTutorial() {
   return (
@@ -14,7 +14,7 @@ export default function KanbanTutorial() {
         completa de um cliente — vida toda dele com a Pneuzero.
       </P>
 
-      <ImagePlaceholder caption="Kanban — colunas de status com cartões de leads que podem ser arrastados" />
+      <HelpImage src="/ajuda/kanban.png" alt="Kanban de leads" caption="Kanban — colunas de status com cartões de leads que podem ser arrastados" />
 
       <Section title="Como ler o Kanban">
         <Checklist
@@ -45,7 +45,7 @@ export default function KanbanTutorial() {
         </Step>
       </Section>
 
-      <ImagePlaceholder caption="Lead 360° — KPIs no topo + abas (Timeline, Veículos, Vendas, NPS, Agendamentos, Follow-ups)" />
+      <HelpImage src="/ajuda/lead360.png" alt="Lead 360°" caption="Lead 360° — KPIs no topo + abas (Timeline, Veículos, Vendas, NPS, Agendamentos, Follow-ups)" />
 
       <Section title="O que tem na Lead 360°">
         <ul className="space-y-3 text-sm text-gray-700">
