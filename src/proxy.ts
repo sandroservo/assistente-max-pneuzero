@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const publicRoutes = ["/login", "/register", "/api/auth", "/api/webhooks", "/api/asaas", "/api/followups/run", "/api/cron"];
-  const publicFiles = ["/manifest.json", "/robots.txt", "/sitemap.xml", "/favicon.ico"];
+  const publicFiles = ["/manifest.json", "/robots.txt", "/sitemap.xml", "/favicon.ico", "/sw.js", "/sw.js.map"];
   const isPublicRoute =
     publicRoutes.some((route) => pathname.startsWith(route)) ||
     publicFiles.includes(pathname);
