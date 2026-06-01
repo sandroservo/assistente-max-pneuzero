@@ -256,22 +256,68 @@ function calculateTypingDelay(text: string): number {
 function splitMessage(text: string, maxLength: number = 300): string[] {
   // Primeiro tenta dividir por parágrafos (linhas duplas)
   const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
-  
+
+  let parts: string[];
   if (paragraphs.length > 1) {
     const result: string[] = [];
     for (const paragraph of paragraphs) {
       if (paragraph.length <= maxLength) {
         result.push(paragraph.trim());
       } else {
-        // Se o parágrafo for muito grande, divide por frases
         result.push(...splitBySentences(paragraph, maxLength));
       }
     }
-    return result;
+    parts = result;
+  } else {
+    parts = splitBySentences(text, maxLength);
   }
-  
-  // Se não tem parágrafos, divide por frases
-  return splitBySentences(text, maxLength);
+
+  // Anti-duplicação: às vezes o modelo gera 2 parágrafos parafraseando a mesma
+  // ideia ("Sim, tá incluso! 😊" + "Sim, tá incluso sim! 👍"). Aqui filtramos
+  // partes muito similares ao que já passou, evitando mandar mensagem repetida.
+  return dedupeSimilarParts(parts);
+}
+
+/**
+ * Normaliza texto pra comparação: lowercase, sem pontuação/emoji/espaços extras.
+ */
+function normalizeForSim(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "") // remove acentos
+    .replace(/[^\p{L}\p{N}\s]/gu, " ") // remove pontuação e emojis
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Jaccard de tokens (palavras). 1.0 = idêntico. 0 = nada em comum.
+ */
+function jaccardSim(a: string, b: string): number {
+  const ta = new Set(normalizeForSim(a).split(" ").filter((w) => w.length > 2));
+  const tb = new Set(normalizeForSim(b).split(" ").filter((w) => w.length > 2));
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let inter = 0;
+  for (const w of ta) if (tb.has(w)) inter++;
+  const uni = ta.size + tb.size - inter;
+  return uni === 0 ? 0 : inter / uni;
+}
+
+function dedupeSimilarParts(parts: string[], threshold = 0.65): string[] {
+  const out: string[] = [];
+  for (const p of parts) {
+    let dup = false;
+    for (const prev of out) {
+      if (jaccardSim(p, prev) >= threshold) {
+        dup = true;
+        console.log(`[evolution] dedupe: descartada parte similar (jaccard) — ${p.slice(0, 60)}…`);
+        break;
+      }
+    }
+    if (!dup) out.push(p);
+  }
+  return out;
 }
 
 function splitBySentences(text: string, maxLength: number): string[] {
