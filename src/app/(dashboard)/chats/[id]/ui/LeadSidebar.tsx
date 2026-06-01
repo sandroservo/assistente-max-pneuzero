@@ -147,7 +147,7 @@ export default function LeadSidebar({
             {lead.ownerType === "human" ? (
               <><UserCheck className="h-3 w-3" /> Humano</>
             ) : (
-              <><Bot className="h-3 w-3" /> Max</>
+              <><Bot className="h-3 w-3" /> Luma</>
             )}
           </div>
         </div>
@@ -240,7 +240,7 @@ export default function LeadSidebar({
         <>
           <Separator />
           <div className="px-4 py-3">
-            <p className="text-xs font-medium text-gray-500 mb-1">Resumo do Max</p>
+            <p className="text-xs font-medium text-gray-500 mb-1">Resumo do Luma</p>
             <p className="text-sm text-gray-600 leading-relaxed">{lead.summary}</p>
           </div>
         </>

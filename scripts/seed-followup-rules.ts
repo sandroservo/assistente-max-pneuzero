@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * Popula FollowUpRule com regras default do Max/Pneuzero.
+ * Popula FollowUpRule com regras default do Luma/Pneuzero.
  * Rodar: npx tsx scripts/seed-followup-rules.ts
  *
  * Regras documentadas em docs/specs/follow-up-rules.md
@@ -27,7 +27,7 @@ const RULES = [
       horarioEnvio: "14:00",
     }),
     template:
-      "Oi {{primeiro_nome}}! Aqui é o Max da Pneuzero. Ontem você passou aqui pra fazer {{ultimo_servico}} no {{veiculo_modelo}} 🚗\n\nDe 0 a 10, quanto você indicaria a gente pra um amigo?",
+      "Oi {{primeiro_nome}}! Aqui é o Luma da Pneuzero. Ontem você passou aqui pra fazer {{ultimo_servico}} no {{veiculo_modelo}} 🚗\n\nDe 0 a 10, quanto você indicaria a gente pra um amigo?",
   },
   {
     tipo: "alinhamento_3m",
@@ -81,7 +81,7 @@ const RULES = [
       horarioEnvio: "11:00",
     }),
     template:
-      "Oi {{primeiro_nome}}! Aqui é o Max. Vi que conversamos uns dias atrás sobre pneu pro seu carro 🚗\n\nAinda tá precisando? Se quiser, posso reservar uma avaliação gratuita aqui na loja. Sem compromisso!",
+      "Oi {{primeiro_nome}}! Aqui é o Luma. Vi que conversamos uns dias atrás sobre pneu pro seu carro 🚗\n\nAinda tá precisando? Se quiser, posso reservar uma avaliação gratuita aqui na loja. Sem compromisso!",
   },
   {
     tipo: "lead_frio_15d",

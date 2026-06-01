@@ -179,7 +179,7 @@ function buildTimeline(data: LeadData): TimelineEvent[] {
       id: `msg-${m.id}`,
       ts: m.createdAt,
       icon: <MessageSquare className="w-3 h-3" />,
-      title: m.direction === "in" ? `Cliente disse` : (m.sentByUserId ? "Atendente respondeu" : "Max respondeu"),
+      title: m.direction === "in" ? `Cliente disse` : (m.sentByUserId ? "Atendente respondeu" : "Luma respondeu"),
       body: m.body ? m.body.slice(0, 220) : `[${m.type}]`,
       color: m.direction === "in" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700",
     });
@@ -508,7 +508,7 @@ function LeadAppointments({ leadId }: { leadId: string }) {
             <span className="text-gray-600">{new Date(a.scheduledAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
             <span className="text-xs text-gray-400 flex items-center gap-1">
               {a.source === "bot" ? <Bot className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
-              {a.source === "bot" ? "Max" : "Manual"}
+              {a.source === "bot" ? "Luma" : "Manual"}
             </span>
             {a.notes && <span className="text-xs text-gray-500 italic truncate max-w-xs">{a.notes}</span>}
           </CardContent>

@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  * 
- * Serviço de IA para Max - Consultor Pneuzero
+ * Serviço de IA para Luma - Consultor Pneuzero
  */
 
 import OpenAI from "openai";
@@ -35,7 +35,7 @@ interface HistoryMessage {
   body: string | null;
   type?: string;
   transcription?: string | null;
-  sentByUserName?: string | null; // null = bot Max; string = nome do atendente humano
+  sentByUserName?: string | null; // null = bot Luma; string = nome do atendente humano
 }
 
 /**
@@ -85,7 +85,7 @@ interface ConversationContext {
 }
 
 /**
- * Retorna o período do dia no fuso do Brasil (America/Sao_Paulo) para o Max usar saudação adequada
+ * Retorna o período do dia no fuso do Brasil (America/Sao_Paulo) para o Luma usar saudação adequada
  */
 function getPeriodoDoDia(): { periodo: string; saudacao: string; horaFormatada: string } {
   const now = new Date();
@@ -109,7 +109,7 @@ function getPeriodoDoDia(): { periodo: string; saudacao: string; horaFormatada: 
   return { periodo: "noite", saudacao: "Boa noite", horaFormatada };
 }
 
-const DEFAULT_SYSTEM_PROMPT = `Você é o Max, consultor da Pneu Zero. Você fala por WhatsApp com leads sobre serviços automotivos EXCLUSIVAMENTE da Pneu Zero.
+const DEFAULT_SYSTEM_PROMPT = `Você é o Luma, consultor da Pneu Zero. Você fala por WhatsApp com leads sobre serviços automotivos EXCLUSIVAMENTE da Pneu Zero.
 
 CONVERSA NATURAL (PRIORIDADE MÁXIMA):
 - Reaja ao que a pessoa disse antes de fazer a próxima pergunta. Nunca ignore a mensagem dela e pule direto para uma pergunta de script.
@@ -256,7 +256,7 @@ export async function generateAIResponse(
       },
     ];
 
-    // Adiciona Tool Information (base de conhecimento) — Max DEVE consultar para serviços, pneus, preços, garantias, endereços.
+    // Adiciona Tool Information (base de conhecimento) — Luma DEVE consultar para serviços, pneus, preços, garantias, endereços.
     if (toolInformation) {
       messages.push({
         role: "system",
@@ -272,7 +272,7 @@ export async function generateAIResponse(
       });
     }
 
-    // Contexto de horário (Brasil): Max sabe se é dia, tarde, noite ou madrugada
+    // Contexto de horário (Brasil): Luma sabe se é dia, tarde, noite ou madrugada
     const { periodo, saudacao, horaFormatada } = getPeriodoDoDia();
     messages.push({
       role: "system",
@@ -283,12 +283,12 @@ export async function generateAIResponse(
     if (isFirstMessage && context.leadName) {
       messages.push({
         role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. O nome dele é ${context.leadName} (do perfil WhatsApp). Apresente-se de forma breve e calorosa usando o nome dele (ex.: "${saudacao}, ${context.leadName}! Sou o Max, da Pneu Zero 🔴 Em que posso te ajudar?"). NÃO pergunte o nome, pois já sabe. Seja natural como no WhatsApp.`,
+        content: `Esta é a PRIMEIRA mensagem do cliente. O nome dele é ${context.leadName} (do perfil WhatsApp). Apresente-se de forma breve e calorosa usando o nome dele (ex.: "${saudacao}, ${context.leadName}! Sou o Luma, da Pneu Zero 🔴 Em que posso te ajudar?"). NÃO pergunte o nome, pois já sabe. Seja natural como no WhatsApp.`,
       });
     } else if (isFirstMessage) {
       messages.push({
         role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou o Max, da Pneu Zero 🔴") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
+        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou o Luma, da Pneu Zero 🔴") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
       });
     } else if (context.leadName) {
       messages.push({
@@ -377,13 +377,13 @@ export async function generateAIResponse(
       });
     }
 
-    // Sinaliza retomada após handoff humano: Max precisa continuar de onde
+    // Sinaliza retomada após handoff humano: Luma precisa continuar de onde
     // o atendente parou, não reiniciar do zero nem ignorar o que ele disse.
     if (context.lastOutFromHuman) {
       const agente = context.lastHumanAgent ?? "um atendente";
       messages.push({
         role: "system",
-        content: `IMPORTANTE — RETOMADA APÓS ATENDIMENTO HUMANO: As últimas mensagens enviadas ao cliente vieram do atendente *${agente}* (não suas). Leia o que ${agente} disse, entenda o ponto da conversa, e CONTINUE de onde ele parou. Não recomece a conversa, não repita perguntas que ${agente} já fez, não desfaça compromissos ou promessas que ${agente} fez. Mantenha sua personalidade do Max, mas honre o que o humano combinou.`,
+        content: `IMPORTANTE — RETOMADA APÓS ATENDIMENTO HUMANO: As últimas mensagens enviadas ao cliente vieram do atendente *${agente}* (não suas). Leia o que ${agente} disse, entenda o ponto da conversa, e CONTINUE de onde ele parou. Não recomece a conversa, não repita perguntas que ${agente} já fez, não desfaça compromissos ou promessas que ${agente} fez. Mantenha sua personalidade do Luma, mas honre o que o humano combinou.`,
       });
     }
 
@@ -621,7 +621,7 @@ function generateFallbackResponse(text: string, leadName?: string | null): strin
   const greeting = leadName ? `${leadName}` : "";
 
   if (t.match(/^(oi|olá|ola|hey|bom dia|boa tarde|boa noite|e ai|eai)/)) {
-    return `Olá! 👋 Eu sou o Max, da Pneuzero. Como posso te chamar?`;
+    return `Olá! 👋 Eu sou o Luma, da Pneuzero. Como posso te chamar?`;
   }
 
   if (t.includes("pneu") || t.includes("medida")) {
@@ -645,7 +645,7 @@ function generateFallbackResponse(text: string, leadName?: string | null): strin
   }
 
   if (!leadName) {
-    return `Olá! Sou o Max, da Pneuzero. Antes de continuar, como posso te chamar? 😊`;
+    return `Olá! Sou o Luma, da Pneuzero. Antes de continuar, como posso te chamar? 😊`;
   }
 
   return `${greeting}, entendi! Me conta um pouco mais do que o carro tá precisando que eu te ajudo. Se preferir falar com um atendente, é só avisar! 🛠️`;
@@ -750,7 +750,7 @@ export function detectLeadStatus(
     return "QUALIFICADO";
   }
 
-  // CONSCIENTIZADO — Max chamou tool de cotação (preço enviado)
+  // CONSCIENTIZADO — Luma chamou tool de cotação (preço enviado)
   // Só avança a partir de NOVO/EM_ATENDIMENTO; não regride status mais avançados.
   if (
     opts.cotacaoEnviada &&
@@ -796,7 +796,7 @@ export async function generateConversationSummary(
 
     const msgs = messageHistory
       .filter((m) => m.body)
-      .map((m) => `${m.direction === "in" ? "Cliente" : "Max"}: ${m.body}`)
+      .map((m) => `${m.direction === "in" ? "Cliente" : "Luma"}: ${m.body}`)
       .join("\n");
 
     if (!msgs.trim()) return null;

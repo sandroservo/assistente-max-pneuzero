@@ -327,7 +327,7 @@ export default function ChatPageClient({
       const newOwner = lead.ownerType === "human" ? "bot" : "human";
       setLead((prev) => ({ ...prev, ownerType: newOwner }));
       showToast(
-        newOwner === "human" ? "Atendimento assumido por você" : "Lead devolvido para Max",
+        newOwner === "human" ? "Atendimento assumido por você" : "Lead devolvido para Luma",
         "success"
       );
     } catch {
@@ -433,10 +433,10 @@ export default function ChatPageClient({
                   ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
                   : "bg-purple-100 text-purple-700 hover:bg-purple-200"
               )}
-              title={lead.ownerType === "human" ? "Devolver para Max" : "Assumir atendimento"}
+              title={lead.ownerType === "human" ? "Devolver para Luma" : "Assumir atendimento"}
             >
               {lead.ownerType === "human" ? (
-                <span className="flex items-center gap-1"><Bot className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Devolver p/ Max</span></span>
+                <span className="flex items-center gap-1"><Bot className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Devolver p/ Luma</span></span>
               ) : (
                 <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Assumir</span></span>
               )}
@@ -582,7 +582,7 @@ export default function ChatPageClient({
                       </div>
                     ) : (
                       <p className={`text-sm font-medium truncate ${!lead.email ? "text-amber-600 italic" : ""}`}>
-                        {lead.email || "Max irá solicitar..."}
+                        {lead.email || "Luma irá solicitar..."}
                       </p>
                     )}
                   </div>
@@ -618,7 +618,7 @@ export default function ChatPageClient({
                       </div>
                     ) : (
                       <p className={`text-sm font-medium truncate ${!lead.city ? "text-amber-600 italic" : ""}`}>
-                        {lead.city || "Max irá solicitar..."}
+                        {lead.city || "Luma irá solicitar..."}
                       </p>
                     )}
                   </div>
@@ -658,7 +658,7 @@ export default function ChatPageClient({
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
                   <div className="flex-1">
                     <p className="text-[11px] text-gray-400 uppercase tracking-wider">Atendimento</p>
-                    <p className="text-sm font-medium">{lead.ownerType === "human" ? "Humano" : "Bot (Max)"}</p>
+                    <p className="text-sm font-medium">{lead.ownerType === "human" ? "Humano" : "Bot (Luma)"}</p>
                   </div>
                   <button
                     onClick={handleHandoff}
@@ -670,7 +670,7 @@ export default function ChatPageClient({
                         : "bg-purple-100 text-purple-700 hover:bg-purple-200"
                     )}
                   >
-                    {lead.ownerType === "human" ? "Devolver p/ Max" : "Assumir"}
+                    {lead.ownerType === "human" ? "Devolver p/ Luma" : "Assumir"}
                   </button>
                 </div>
                 <div className="p-3 rounded-lg bg-gray-50">

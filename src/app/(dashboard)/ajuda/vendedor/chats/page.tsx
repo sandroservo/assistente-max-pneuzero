@@ -23,7 +23,7 @@ export default function ChatsTutorial() {
           Procure por nome, telefone, ou trecho de mensagem. A busca é em tempo real.
         </Step>
         <Step n={3} title="Clique na conversa">
-          O histórico completo abre à direita. Mensagens do cliente aparecem à esquerda; respostas (suas ou do Max) à direita em vermelho.
+          O histórico completo abre à direita. Mensagens do cliente aparecem à esquerda; respostas (suas ou do Luma) à direita em vermelho.
         </Step>
       </Section>
 
@@ -32,22 +32,22 @@ export default function ChatsTutorial() {
           O badge ao lado do nome do lead mostra:
         </P>
         <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
-          <li><strong className="text-emerald-700">Max (bot)</strong> — o assistente está respondendo sozinho</li>
+          <li><strong className="text-emerald-700">Luma (bot)</strong> — o assistente está respondendo sozinho</li>
           <li><strong className="text-blue-700">Humano</strong> — algum vendedor já assumiu a conversa</li>
           <li><strong className="text-amber-700">Aguardando humano</strong> — handoff aberto, ninguém pegou ainda</li>
         </ul>
       </Section>
 
-      <Section title="Assumir uma conversa do Max">
+      <Section title="Assumir uma conversa do Luma">
         <Step n={1} title="Lead com handoff aparece destacado no /equipe">
-          Quando Max transfere, posta no canal Geral: <em>🆘 Transferência para humano — &lt;nome&gt; — &lt;motivo&gt;</em>.
+          Quando Luma transfere, posta no canal Geral: <em>🆘 Transferência para humano — &lt;nome&gt; — &lt;motivo&gt;</em>.
         </Step>
         <Step n={2} title="Clique no nome do cliente no alerta">
           Vai direto pra conversa.
         </Step>
         <Step n={3} title="Mande sua primeira mensagem">
           Basta digitar e enviar. O sistema reconhece automaticamente que <strong>você</strong> respondeu — marca a conversa
-          como atendida por humano e o Max não responde mais sozinho.
+          como atendida por humano e o Luma não responde mais sozinho.
         </Step>
       </Section>
 
@@ -67,17 +67,17 @@ export default function ChatsTutorial() {
         />
       </Section>
 
-      <Section title="Devolver conversa pro Max">
+      <Section title="Devolver conversa pro Luma">
         <P>
           Se o cliente já foi atendido e quer voltar pro fluxo automático (ex: pediu agendamento, você fechou, agora ele quer só receber lembretes):
         </P>
         <Step n={1} title="Botão 'Devolver ao bot' no topo da conversa">
-          Reativa o Max para esse lead. Próxima mensagem do cliente cai novamente no fluxo automático.
+          Reativa o Luma para esse lead. Próxima mensagem do cliente cai novamente no fluxo automático.
         </Step>
       </Section>
 
       <Tip>
-        Se um lead some por dias e você quer reaquecer, mande uma mensagem manual perguntando se está tudo certo. O Max
+        Se um lead some por dias e você quer reaquecer, mande uma mensagem manual perguntando se está tudo certo. O Luma
         retoma do contexto se o cliente responder.
       </Tip>
 

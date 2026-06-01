@@ -9,9 +9,9 @@ import { MessageSquare, MessagesSquare, Calendar, Layout, ArrowRight } from "luc
 
 export default function VendedorIndex() {
   return (
-    <Article title="Visão geral — Vendedor" subtitle="Tudo o que você precisa pra atender clientes no Assistente Max no dia-a-dia.">
+    <Article title="Visão geral — Vendedor" subtitle="Tudo o que você precisa pra atender clientes no Assistente Luma no dia-a-dia.">
       <P>
-        O Max é o assistente de IA da Pneuzero. Ele recebe mensagens do WhatsApp, responde
+        O Luma é o assistente de IA da Pneuzero. Ele recebe mensagens do WhatsApp, responde
         automaticamente baseado no catálogo e na base de conhecimento, e <strong>transfere
         a conversa pra você</strong> quando o cliente pede atendente, quando o pedido vai fechar,
         ou quando ele não tem confiança na resposta.
@@ -20,7 +20,7 @@ export default function VendedorIndex() {
       <Section title="O que você faz no painel">
         <ul className="space-y-2 text-sm text-gray-700 list-disc pl-5">
           <li>Ler conversas em andamento na <strong>Inbox /chats</strong></li>
-          <li>Assumir conversa quando Max transfere (handoff)</li>
+          <li>Assumir conversa quando Luma transfere (handoff)</li>
           <li>Marcar agendamentos manualmente em <strong>/agendamentos</strong></li>
           <li>Trocar mensagens com a equipe em <strong>/equipe</strong> (canal Geral + PV)</li>
           <li>Acompanhar lead no Kanban e ver ficha completa em <strong>Lead 360°</strong></li>
@@ -37,7 +37,7 @@ export default function VendedorIndex() {
       </Section>
 
       <Tip>
-        Quando Max transfere uma conversa pra humano, todo o time recebe alerta no <strong>canal Geral</strong> do
+        Quando Luma transfere uma conversa pra humano, todo o time recebe alerta no <strong>canal Geral</strong> do
         /equipe com beep e badge. Mantenha a aba do /equipe aberta enquanto trabalha — você não perde nenhum handoff.
       </Tip>
     </Article>

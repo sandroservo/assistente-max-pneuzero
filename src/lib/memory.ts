@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  * 
- * Serviço de Memória de Leads do Max
+ * Serviço de Memória de Leads do Luma
  * Armazena preferências, interesses, objeções e contexto das conversas
  */
 

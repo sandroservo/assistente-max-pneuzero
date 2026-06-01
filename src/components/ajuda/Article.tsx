@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br

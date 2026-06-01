@@ -142,11 +142,11 @@ export function Sidebar() {
       <div className={cn("rounded-xl bg-gray-50 shrink-0", collapsed && !isMobile ? "p-2 m-2 flex justify-center" : "p-4 m-3 mb-2")}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#CC0000] flex items-center justify-center text-white font-semibold text-sm shrink-0">
-            Max
+            Luma
           </div>
           {(isMobile || !collapsed) && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">Max Assistente</p>
+              <p className="text-sm font-medium text-gray-800 truncate">Luma Assistente</p>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <p className="text-xs text-gray-500">Online</p>

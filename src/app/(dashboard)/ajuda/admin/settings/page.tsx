@@ -7,7 +7,7 @@ import { Article, P, Section, Step, Tip, Warning, Note } from "@/components/ajud
 
 export default function SettingsTutorial() {
   return (
-    <Article title="Configurações" subtitle="OpenAI, Evolution, instâncias WhatsApp e o prompt do Max.">
+    <Article title="Configurações" subtitle="OpenAI, Evolution, instâncias WhatsApp e o prompt do Luma.">
       <P>
         A página <strong>/settings</strong> tem 4 áreas principais. Cada uma é detalhada abaixo.
       </P>
@@ -59,8 +59,8 @@ export default function SettingsTutorial() {
         </Note>
       </Section>
 
-      <Section title="4. System prompt do Max">
-        <Step n={1} title="Abra /settings → Prompt do Max">
+      <Section title="4. System prompt do Luma">
+        <Step n={1} title="Abra /settings → Prompt do Luma">
           Editor de texto grande com o prompt atual.
         </Step>
         <Step n={2} title="Edite com cuidado">

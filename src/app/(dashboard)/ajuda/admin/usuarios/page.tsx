@@ -59,14 +59,14 @@ export default function UsuariosTutorial() {
         </Note>
       </Section>
 
-      <Section title="Usuário especial 'Max' (bot)">
+      <Section title="Usuário especial 'Luma' (bot)">
         <P>
-          O sistema cria automaticamente um usuário com nome &quot;Max&quot; e role VIEWER quando precisa postar no chat
+          O sistema cria automaticamente um usuário com nome &quot;Luma&quot; e role VIEWER quando precisa postar no chat
           /equipe (ex: alertas de handoff, agendamento). Esse usuário tem <code>active: false</code> e por isso NÃO
           aparece na lista de vendedores do PV. É só o avatar do bot dentro do chat interno.
         </P>
         <Warning>
-          Não delete o usuário &quot;Max&quot; — sistema vai recriar mas vai poluir o histórico do /equipe.
+          Não delete o usuário &quot;Luma&quot; — sistema vai recriar mas vai poluir o histórico do /equipe.
         </Warning>
       </Section>
 

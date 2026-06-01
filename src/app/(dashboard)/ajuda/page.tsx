@@ -17,7 +17,7 @@ export default function AjudaIndex() {
         </div>
         <h1 className="text-3xl font-semibold text-gray-900">Central de Ajuda</h1>
         <p className="mt-3 text-gray-500 max-w-xl mx-auto">
-          Tutoriais passo a passo para usar o Assistente Max. Escolha o seu perfil abaixo.
+          Tutoriais passo a passo para usar o Assistente Luma. Escolha o seu perfil abaixo.
         </p>
       </header>
 
@@ -34,7 +34,7 @@ export default function AjudaIndex() {
           icon={<ShieldCheck className="w-6 h-6 text-blue-700" />}
           tone="bg-blue-50 border-blue-100"
           title="Admin"
-          desc="Configurar integrações Evolution/OpenAI, gerenciar usuários, alimentar a base de conhecimento e ajustar o prompt do Max."
+          desc="Configurar integrações Evolution/OpenAI, gerenciar usuários, alimentar a base de conhecimento e ajustar o prompt do Luma."
         />
       </div>
 

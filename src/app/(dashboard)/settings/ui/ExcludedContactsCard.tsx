@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * Lista de exceção: números para o Max NÃO responder (ex.: pessoas da empresa).
+ * Lista de exceção: números para o Luma NÃO responder (ex.: pessoas da empresa).
  */
 
 "use client";
@@ -96,7 +96,7 @@ export function ExcludedContactsCard() {
           Lista de exceção
         </CardTitle>
         <CardDescription>
-          Números para o Max <strong>não</strong> responder (ex.: pessoas da empresa, comerciais). Quem estiver na lista não receberá resposta automática do Max.
+          Números para o Luma <strong>não</strong> responder (ex.: pessoas da empresa, comerciais). Quem estiver na lista não receberá resposta automática do Luma.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -143,7 +143,7 @@ export function ExcludedContactsCard() {
             </div>
           ) : list.length === 0 ? (
             <div className="p-4 text-gray-500 text-sm">
-              Nenhum número na lista. Adicione telefones para o Max não responder.
+              Nenhum número na lista. Adicione telefones para o Luma não responder.
             </div>
           ) : (
             list.map((c) => (

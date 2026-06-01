@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * API para lista de exceção: números para o Max NÃO responder (ex.: pessoas da empresa).
+ * API para lista de exceção: números para o Luma NÃO responder (ex.: pessoas da empresa).
  */
 
 import { NextRequest, NextResponse } from "next/server";

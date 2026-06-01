@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  * 
- * API para gerenciar base de conhecimento do Max
+ * API para gerenciar base de conhecimento do Luma
  */
 
 import { NextRequest, NextResponse } from "next/server";

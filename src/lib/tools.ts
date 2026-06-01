@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * Tools (function-calling OpenAI) do Max.
+ * Tools (function-calling OpenAI) do Luma.
  * Define schemas e executores para registrar veículo, buscar pneu/serviço,
  * cotar, agendar visita, transferir para humano.
  */

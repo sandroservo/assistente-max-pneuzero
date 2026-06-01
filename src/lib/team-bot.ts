@@ -2,8 +2,8 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * Posta mensagens automáticas (do Max bot) no canal Geral do /equipe.
- * Usa um User especial "Max" da org como autor. Cria se não existir.
+ * Posta mensagens automáticas (do Luma bot) no canal Geral do /equipe.
+ * Usa um User especial "Luma" da org como autor. Cria se não existir.
  */
 
 import { prisma } from "./prisma";
@@ -24,7 +24,7 @@ async function getOrCreateMaxBotUser(organizationId: string): Promise<{ id: stri
   return prisma.user.create({
     data: {
       organizationId,
-      name: "Max",
+      name: "Luma",
       email,
       passwordHash: inertHash,
       role: "VIEWER",
@@ -36,7 +36,7 @@ async function getOrCreateMaxBotUser(organizationId: string): Promise<{ id: stri
 }
 
 /**
- * Posta mensagem do bot Max no canal Geral da organização.
+ * Posta mensagem do bot Luma no canal Geral da organização.
  * Não bloqueia o fluxo principal — qualquer erro só loga.
  */
 export async function postBotToGeneral(organizationId: string, body: string): Promise<void> {

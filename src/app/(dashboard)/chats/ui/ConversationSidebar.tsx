@@ -224,9 +224,9 @@ export default function ConversationSidebar({
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
   useEffect(() => {
     document.title = totalUnread > 0
-      ? `(${totalUnread}) Conversas — Max Assistente`
-      : "Conversas — Max Assistente";
-    return () => { document.title = "Max Assistente"; };
+      ? `(${totalUnread}) Conversas — Luma Assistente`
+      : "Conversas — Luma Assistente";
+    return () => { document.title = "Luma Assistente"; };
   }, [totalUnread]);
 
   // Filtra conversas pela busca
@@ -320,7 +320,7 @@ export default function ConversationSidebar({
                     "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white",
                     conv.ownerType === "human" ? "bg-green-500" : "bg-blue-500"
                   )}
-                  title={conv.ownerType === "human" ? "Atendimento humano" : "Max (Bot)"}
+                  title={conv.ownerType === "human" ? "Atendimento humano" : "Luma (Bot)"}
                 >
                   {conv.ownerType === "human" ? (
                     <UserCheck className="h-2.5 w-2.5 text-white" />

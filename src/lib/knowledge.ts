@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  * 
- * Serviço de Base de Conhecimento do Max
+ * Serviço de Base de Conhecimento do Luma
  * Similar às Tools do n8n - fonte de verdade para planos, regras, links, etc.
  */
 

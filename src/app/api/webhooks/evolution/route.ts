@@ -299,7 +299,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, action: "human_owner" });
     }
 
-    // Lista de exceção: números da empresa etc. — Max não responde
+    // Lista de exceção: números da empresa etc. — Luma não responde
     const phoneNormalized = phone.replace(/\D/g, "").slice(-11);
     if (phoneNormalized) {
       const excluded = await prisma.excludedContact.findUnique({
@@ -384,12 +384,12 @@ export async function POST(req: Request) {
       ? (Date.now() - lastBefore.createdAt.getTime()) / 36e5
       : 0;
 
-    // Quem fez a última mensagem out (Max ou atendente humano)?
+    // Quem fez a última mensagem out (Luma ou atendente humano)?
     const lastOut = [...previousMessages].reverse().find((m) => m.direction === "out");
     const lastHumanAgent = lastOut?.sentByUser?.name ?? null;
     const lastOutFromHuman = !!lastOut?.sentByUserId;
 
-    // Gera resposta humanizada com IA (Max - Pneuzero)
+    // Gera resposta humanizada com IA (Luma - Pneuzero)
     const { response: botResponse, extractedData, cotacaoEnviada } = await generateAIResponse(text ?? "", {
       leadId: lead.id,
       organizationId: lead.organizationId,

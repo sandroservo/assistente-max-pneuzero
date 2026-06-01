@@ -7,12 +7,12 @@ import { Article, P, Section, Step, Tip, Note, HelpImage } from "@/components/aj
 
 export default function EquipeTutorial() {
   return (
-    <Article title="Chat interno /equipe" subtitle="Conversar com o time, receber alertas do Max e mandar mensagem privada pra outro vendedor.">
+    <Article title="Chat interno /equipe" subtitle="Conversar com o time, receber alertas do Luma e mandar mensagem privada pra outro vendedor.">
       <P>
         O <strong>/equipe</strong> é o chat interno só do time da Pneuzero. Tem 2 espaços:
       </P>
       <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
-        <li><strong>Geral</strong> — canal único que todo mundo da loja vê. Anúncios, dúvidas rápidas, e alertas automáticos do Max</li>
+        <li><strong>Geral</strong> — canal único que todo mundo da loja vê. Anúncios, dúvidas rápidas, e alertas automáticos do Luma</li>
         <li><strong>PV (mensagem privada)</strong> — 1-a-1 com qualquer outro vendedor</li>
       </ul>
 
@@ -42,17 +42,17 @@ export default function EquipeTutorial() {
         </Step>
       </Section>
 
-      <Section title="Receber alertas do Max">
+      <Section title="Receber alertas do Luma">
         <P>
-          O Max posta automático no canal <strong>Geral</strong> em 3 situações:
+          O Luma posta automático no canal <strong>Geral</strong> em 3 situações:
         </P>
         <ul className="text-sm text-gray-700 list-disc pl-5 space-y-2">
           <li>
-            <strong>🆘 Transferência para humano</strong> — Max não conseguiu responder ou cliente pediu atendente.
+            <strong>🆘 Transferência para humano</strong> — Luma não conseguiu responder ou cliente pediu atendente.
             Mostra nome, telefone, motivo e resumo.
           </li>
           <li>
-            <strong>🗓️ Novo agendamento</strong> — Max marcou serviço com cliente. Mostra serviço, data, veículo.
+            <strong>🗓️ Novo agendamento</strong> — Luma marcou serviço com cliente. Mostra serviço, data, veículo.
           </li>
           <li>
             <strong>❌ Agendamento cancelado</strong> — cliente desmarcou via WhatsApp.

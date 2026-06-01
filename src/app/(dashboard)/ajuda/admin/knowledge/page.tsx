@@ -7,10 +7,10 @@ import { Article, P, Section, Step, Tip, Warning, Checklist } from "@/components
 
 export default function KnowledgeTutorial() {
   return (
-    <Article title="Base de conhecimento" subtitle="O que o Max sabe sobre a Pneuzero. Tudo o que ele responde sai daqui.">
+    <Article title="Base de conhecimento" subtitle="O que o Luma sabe sobre a Pneuzero. Tudo o que ele responde sai daqui.">
       <P>
-        A página <strong>/knowledge</strong> é onde você cadastra os fatos que o Max usa pra responder: preços de
-        serviços, regras de troca, garantia, endereço, horário, promoções. Sem base, o Max não inventa — recomenda
+        A página <strong>/knowledge</strong> é onde você cadastra os fatos que o Luma usa pra responder: preços de
+        serviços, regras de troca, garantia, endereço, horário, promoções. Sem base, o Luma não inventa — recomenda
         transferir pra humano.
       </P>
 
@@ -18,18 +18,18 @@ export default function KnowledgeTutorial() {
         <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
           <li><strong>Título</strong> — resumo curto (ex: &quot;Garantia de pneus&quot;)</li>
           <li><strong>Conteúdo</strong> — texto completo com a regra/informação</li>
-          <li><strong>Tags</strong> — palavras-chave que ajudam o Max a achar (ex: &quot;pneu, garantia, troca&quot;)</li>
+          <li><strong>Tags</strong> — palavras-chave que ajudam o Luma a achar (ex: &quot;pneu, garantia, troca&quot;)</li>
           <li><strong>Categoria</strong> — agrupamento (Serviços, Promoções, Endereço, etc)</li>
         </ul>
       </Section>
 
-      <Section title="Como o Max usa a base">
+      <Section title="Como o Luma usa a base">
         <Checklist
           items={[
-            "Para a 1ª mensagem do lead, Max carrega TODA a base (até 100 itens)",
-            "Para mensagens seguintes, Max busca os 25 itens mais relevantes + 60 base + concatena",
+            "Para a 1ª mensagem do lead, Luma carrega TODA a base (até 100 itens)",
+            "Para mensagens seguintes, Luma busca os 25 itens mais relevantes + 60 base + concatena",
             "Toda mensagem do cliente é injetada no contexto OpenAI junto com a base",
-            "Sem item relacionado, Max é instruído a NÃO inventar — oferece transferir_humano",
+            "Sem item relacionado, Luma é instruído a NÃO inventar — oferece transferir_humano",
           ]}
         />
       </Section>
@@ -48,7 +48,7 @@ export default function KnowledgeTutorial() {
           Selecione ou crie nova. Útil pra organização interna.
         </Step>
         <Step n={5} title="Salvar">
-          Item já entra na próxima busca do Max. Sem restart.
+          Item já entra na próxima busca do Luma. Sem restart.
         </Step>
       </Section>
 
@@ -84,12 +84,12 @@ export default function KnowledgeTutorial() {
       </Section>
 
       <Warning>
-        Itens com informação contraditória confundem o Max. Se mudar de preço/regra, EDITE o item existente — não crie
+        Itens com informação contraditória confundem o Luma. Se mudar de preço/regra, EDITE o item existente — não crie
         outro. Use Histórico (se disponível) pra ver o que estava antes.
       </Warning>
 
       <Tip>
-        Quando vendedor receber dúvida de cliente que o Max não soube responder, anote o assunto e crie item de
+        Quando vendedor receber dúvida de cliente que o Luma não soube responder, anote o assunto e crie item de
         conhecimento depois. A base melhora com o uso.
       </Tip>
     </Article>

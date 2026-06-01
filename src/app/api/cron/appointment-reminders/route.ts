@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     }
     const firstName = (a.lead.name?.split(" ")[0] ?? "tudo bem").trim();
     const text =
-      `Oi ${firstName}! Aqui é o Max da Pneu Zero 🛞\n` +
+      `Oi ${firstName}! Aqui é o Luma da Pneu Zero 🛞\n` +
       `Só passando pra lembrar do seu *${a.serviceName}* marcado pra amanhã às *${formatBRShort(a.scheduledAt)}*. ` +
       `Está confirmado? Se precisar remarcar, é só me avisar por aqui.`;
 

@@ -200,7 +200,7 @@ export function KnowledgeManager({ initialItems, categories }: Props) {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Base de Conhecimento</h1>
           <p className="text-gray-500">
-            {items.length} itens • Gerencie as informações do Max
+            {items.length} itens • Gerencie as informações do Luma
           </p>
         </div>
 
@@ -222,7 +222,7 @@ export function KnowledgeManager({ initialItems, categories }: Props) {
               <DialogDescription>
                 {editingItem
                   ? "Edite as informações abaixo"
-                  : "Adicione um novo conhecimento para o Max"}
+                  : "Adicione um novo conhecimento para o Luma"}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">

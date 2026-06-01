@@ -444,7 +444,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
             <Reply className="h-4 w-4 text-red-600 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold text-red-600">
-                {replyingTo.direction === "out" ? (replyingTo.sentByUserName || "Max") : "Lead"}
+                {replyingTo.direction === "out" ? (replyingTo.sentByUserName || "Luma") : "Lead"}
               </p>
               <p className="text-xs text-gray-600 truncate">{replyingTo.body || "Mídia"}</p>
             </div>

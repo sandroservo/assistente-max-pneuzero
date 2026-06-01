@@ -25,13 +25,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Pneuzero - Assistente Max",
+  title: "Pneuzero - Assistente Luma",
   description: "Sistema de gestão de leads e atendimento inteligente - Pneuzero",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Pneuzero Max",
+    title: "Pneuzero Luma",
   },
   icons: {
     icon: [

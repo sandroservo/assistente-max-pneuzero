@@ -116,7 +116,7 @@ export function AgendamentosClient() {
           <Calendar className="w-6 h-6 text-[#CC0000]" />
           <div>
             <h1 className="text-2xl font-semibold text-gray-800">Agendamentos</h1>
-            <p className="text-sm text-gray-500">Manutenções marcadas pelo Max ou pelo time</p>
+            <p className="text-sm text-gray-500">Manutenções marcadas pelo Luma ou pelo time</p>
           </div>
         </div>
         <button
@@ -181,7 +181,7 @@ export function AgendamentosClient() {
                       </span>
                       <span className="text-xs text-gray-400 flex items-center gap-1">
                         {a.source === "bot" ? <Bot className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-                        {a.source === "bot" ? "Max" : a.createdBy?.name ?? "Manual"}
+                        {a.source === "bot" ? "Luma" : a.createdBy?.name ?? "Manual"}
                       </span>
                     </div>
                     <p className="text-sm text-gray-700">{a.serviceName}</p>

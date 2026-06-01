@@ -58,7 +58,7 @@ export default function HandoffButton({ leadId, isHuman, onToast }: HandoffButto
         return;
       }
 
-      onToast?.("Lead devolvido para Max", "success");
+      onToast?.("Lead devolvido para Luma", "success");
       window.location.reload();
     } catch (error) {
       console.error("Erro ao devolver:", error);
@@ -86,7 +86,7 @@ export default function HandoffButton({ leadId, isHuman, onToast }: HandoffButto
           ) : (
             <Bot className="h-4 w-4 mr-2" />
           )}
-          Devolver para Max (Bot)
+          Devolver para Luma (Bot)
         </Button>
       </div>
     );

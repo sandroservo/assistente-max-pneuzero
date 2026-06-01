@@ -284,7 +284,7 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
             <CardHeader>
               <CardTitle>Configurações da OpenAI</CardTitle>
               <CardDescription>
-                Configure a chave de API da OpenAI para o Max
+                Configure a chave de API da OpenAI para o Luma
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -318,7 +318,7 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
                   placeholder="gpt-4o-mini"
                 />
                 <p className="text-xs text-gray-500">
-                  Modelo usado pelo Max (ex.: gpt-4o-mini, gpt-4o). Deixe em branco para usar gpt-4o-mini.
+                  Modelo usado pelo Luma (ex.: gpt-4o-mini, gpt-4o). Deixe em branco para usar gpt-4o-mini.
                 </p>
               </div>
             </CardContent>
@@ -389,9 +389,9 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
         <TabsContent value="prompt" className="space-y-4 pt-4">
           <Card>
             <CardHeader>
-              <CardTitle>System Prompt do Max</CardTitle>
+              <CardTitle>System Prompt do Luma</CardTitle>
               <CardDescription>
-                Configure a personalidade e comportamento do Max
+                Configure a personalidade e comportamento do Luma
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -401,7 +401,7 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
                   id="systemPrompt"
                   value={formData.systemPrompt || defaultSystemPrompt}
                   onChange={(e) => handleChange("systemPrompt", e.target.value)}
-                  placeholder="Você é o Max, assistente virtual..."
+                  placeholder="Você é o Luma, assistente virtual..."
                   rows={15}
                   className="font-mono text-sm"
                 />

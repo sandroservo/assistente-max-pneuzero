@@ -10,7 +10,7 @@ export default function AgendamentosTutorial() {
     <Article title="Agendamentos" subtitle="Marcar manutenção, ver agenda do dia, concluir ou cancelar serviços.">
       <P>
         A página <strong>/agendamentos</strong> mostra a agenda da Pneuzero agrupada por dia. Cada item tem
-        cliente, serviço, hora, veículo e status. Vendedor cria manual; Max cria automático quando combina com cliente
+        cliente, serviço, hora, veículo e status. Vendedor cria manual; Luma cria automático quando combina com cliente
         no WhatsApp.
       </P>
 
@@ -68,19 +68,19 @@ export default function AgendamentosTutorial() {
         />
       </Section>
 
-      <Section title="Como o Max marca automático">
+      <Section title="Como o Luma marca automático">
         <P>
           Quando cliente diz no WhatsApp algo como <em>&quot;quero agendar alinhamento sábado 14h&quot;</em>:
         </P>
         <ol className="text-sm text-gray-700 list-decimal pl-5 space-y-1">
-          <li>Max repete os dados pra confirmar: &quot;Vou marcar alinhamento sábado 18/05 às 14h. Pode ser?&quot;</li>
+          <li>Luma repete os dados pra confirmar: &quot;Vou marcar alinhamento sábado 18/05 às 14h. Pode ser?&quot;</li>
           <li>Cliente responde &quot;sim&quot; ou &quot;pode marcar&quot;</li>
-          <li>Max grava o agendamento + posta no Geral do /equipe</li>
+          <li>Luma grava o agendamento + posta no Geral do /equipe</li>
           <li>Agendamento aparece automaticamente na sua lista</li>
         </ol>
         <Note>
-          Max NUNCA marca sem confirmação do cliente. Se ele cancelar via WhatsApp depois (&quot;preciso desmarcar
-          sábado&quot;), o Max cancela e também avisa no Geral.
+          Luma NUNCA marca sem confirmação do cliente. Se ele cancelar via WhatsApp depois (&quot;preciso desmarcar
+          sábado&quot;), o Luma cancela e também avisa no Geral.
         </Note>
       </Section>
 
@@ -89,11 +89,11 @@ export default function AgendamentosTutorial() {
           Todo dia às 9h, o sistema dispara mensagem WhatsApp pros clientes com agendamento marcado pra dia seguinte:
         </P>
         <blockquote className="border-l-4 border-gray-200 pl-3 italic text-gray-600 text-sm">
-          Oi João! Aqui é o Max da Pneu Zero 🛞. Só passando pra lembrar do seu Alinhamento marcado pra amanhã às 14h.
+          Oi João! Aqui é o Luma da Pneu Zero 🛞. Só passando pra lembrar do seu Alinhamento marcado pra amanhã às 14h.
           Está confirmado? Se precisar remarcar, é só me avisar por aqui.
         </blockquote>
         <P>
-          Se cliente responder confirmando ou pedindo pra remarcar, cai na conversa normal pelo Max.
+          Se cliente responder confirmando ou pedindo pra remarcar, cai na conversa normal pelo Luma.
         </P>
       </Section>
 

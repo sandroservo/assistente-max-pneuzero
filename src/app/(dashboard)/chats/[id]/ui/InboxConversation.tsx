@@ -353,7 +353,7 @@ export default function InboxConversation({
                     )}>
                       {isHuman
                         ? m.sentByUserName!.split(" ")[0][0].toUpperCase()
-                        : "Max"}
+                        : "Luma"}
                     </div>
                   ) : (
                     <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-gradient-to-br from-gray-400 to-gray-500 text-white ring-2 ring-white shadow-sm">
@@ -382,7 +382,7 @@ export default function InboxConversation({
                             : "bg-gray-100 border-red-500 text-gray-600"
                         )}>
                           <p className="font-semibold text-[10px] mb-0.5">
-                            {quoted.direction === "out" ? (quoted.sentByUserName || "Max") : "Lead"}
+                            {quoted.direction === "out" ? (quoted.sentByUserName || "Luma") : "Lead"}
                           </p>
                           <p className="line-clamp-2">{quoted.body || "Mídia"}</p>
                         </div>
@@ -535,7 +535,7 @@ export default function InboxConversation({
                       isOut ? "text-right" : "text-left"
                     )}>
                       {isOut
-                        ? m.sentByUserName || "Max"
+                        ? m.sentByUserName || "Luma"
                         : "Lead"}
                     </p>
                   </div>

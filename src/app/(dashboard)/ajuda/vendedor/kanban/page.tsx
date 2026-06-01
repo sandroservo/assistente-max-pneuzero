@@ -70,7 +70,7 @@ export default function KanbanTutorial() {
           </li>
           <li>
             <strong>Aba Agendamentos</strong> — manutenções marcadas, status (confirmado/concluído/cancelado), fonte
-            (Max ou manual)
+            (Luma ou manual)
           </li>
           <li>
             <strong>Aba Follow-ups</strong> — mensagens automáticas agendadas (lembrete de troca de óleo, alinhamento

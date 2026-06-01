@@ -9,21 +9,21 @@ import { Settings, BookOpen, Users, ArrowRight } from "lucide-react";
 
 export default function AdminIndex() {
   return (
-    <Article title="Visão geral — Admin" subtitle="Configurar o sistema, alimentar o conhecimento do Max e gerenciar usuários.">
+    <Article title="Visão geral — Admin" subtitle="Configurar o sistema, alimentar o conhecimento do Luma e gerenciar usuários.">
       <P>
         Como admin você configura integrações (WhatsApp via Evolution + OpenAI), alimenta a base de conhecimento que o
-        Max consulta, define o prompt do assistente, gerencia usuários (vendedores), tags do Kanban e regras de follow-up.
+        Luma consulta, define o prompt do assistente, gerencia usuários (vendedores), tags do Kanban e regras de follow-up.
       </P>
 
       <Warning>
         Alterações em Configurações (especialmente system_prompt, tokens Evolution e OpenAI) afetam imediatamente o
-        comportamento do Max em produção. Faça backup do prompt atual antes de mudanças grandes.
+        comportamento do Luma em produção. Faça backup do prompt atual antes de mudanças grandes.
       </Warning>
 
       <Section title="Áreas administrativas">
         <div className="grid sm:grid-cols-3 gap-3 not-prose">
-          <Card href="/ajuda/admin/settings" icon={<Settings className="w-5 h-5" />} title="Configurações" desc="OpenAI, Evolution, prompt do Max" />
-          <Card href="/ajuda/admin/knowledge" icon={<BookOpen className="w-5 h-5" />} title="Conhecimento" desc="Base que o Max consulta" />
+          <Card href="/ajuda/admin/settings" icon={<Settings className="w-5 h-5" />} title="Configurações" desc="OpenAI, Evolution, prompt do Luma" />
+          <Card href="/ajuda/admin/knowledge" icon={<BookOpen className="w-5 h-5" />} title="Conhecimento" desc="Base que o Luma consulta" />
           <Card href="/ajuda/admin/usuarios" icon={<Users className="w-5 h-5" />} title="Usuários" desc="Vendedores, roles, senhas" />
         </div>
       </Section>
@@ -34,7 +34,7 @@ export default function AdminIndex() {
           <li>Configurar tokens OpenAI e Evolution em /settings</li>
           <li>Conectar instância WhatsApp (QR code) em /settings &gt; Instâncias</li>
           <li>Alimentar base de conhecimento em /knowledge (preços, regras, endereços)</li>
-          <li>Revisar system_prompt do Max em /settings &gt; Prompt</li>
+          <li>Revisar system_prompt do Luma em /settings &gt; Prompt</li>
           <li>Testar mandando uma mensagem do seu celular pro número conectado</li>
         </ol>
       </Section>
