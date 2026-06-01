@@ -19,6 +19,7 @@ import {
   formatBR,
 } from "./appointments";
 import { postBotToGeneral } from "./team-bot";
+import { pushToActiveAgents } from "./web-push";
 
 export interface ToolContext {
   leadId: string;
@@ -544,11 +545,19 @@ async function execTransferirHumano(
       ctx.organizationId,
       `🆘 *Transferência para humano*\n👤 ${clienteNome}\n📞 ${lead.phone}\n💬 Motivo: ${args.motivo}${args.resumo ? `\n📝 ${args.resumo}` : ""}`
     );
+    // Web Push pra todos vendedores ativos (mesmo com painel fechado)
+    void pushToActiveAgents(ctx.organizationId, {
+      title: `🆘 Novo handoff — ${clienteNome}`,
+      body: args.motivo + (args.resumo ? `\n${args.resumo}` : ""),
+      url: "/equipe",
+      tag: `handoff-${handoff.id}`,
+      requireInteraction: true,
+    });
   }
 
   return JSON.stringify({
     ok: true,
     handoffId: handoff.id,
-    message: "Handoff criado. Avise o cliente que vai transferir. Time já notificado no /equipe.",
+    message: "Handoff criado. Avise o cliente que vai transferir. Time já notificado no /equipe + push.",
   });
 }

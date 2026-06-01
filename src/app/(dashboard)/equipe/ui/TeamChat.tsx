@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send, Smile, Bell, BellOff, Users as UsersIcon, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmojiPicker } from "./EmojiPicker";
+import { PushNotificationSetup } from "@/components/PushNotificationSetup";
 
 interface TeamUser {
   id: string;
@@ -277,16 +278,19 @@ export function TeamChat({ currentUserId, currentUserName }: { currentUserId: st
     <div className="flex flex-1 min-h-0">
       {/* Sidebar do chat */}
       <aside className="w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800">Chat da Equipe</h2>
-          <button
-            type="button"
-            onClick={requestNotif}
-            title={notifPerm === "granted" ? "Notificações ativas" : "Permitir notificações"}
-            className="text-gray-500 hover:text-gray-800"
-          >
-            {notifPerm === "granted" ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-          </button>
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold text-gray-800">Chat da Equipe</h2>
+            <button
+              type="button"
+              onClick={requestNotif}
+              title={notifPerm === "granted" ? "Notificações in-app ativas" : "Permitir notificações in-app"}
+              className="text-gray-500 hover:text-gray-800"
+            >
+              {notifPerm === "granted" ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            </button>
+          </div>
+          <PushNotificationSetup className="border-t border-gray-100 pt-2 mt-2" />
         </div>
 
         <div className="p-2">
