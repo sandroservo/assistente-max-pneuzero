@@ -9,8 +9,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Calendar, Plus, Search, X, Bot, User as UserIcon } from "lucide-react";
+import { Calendar, Plus, Search, X, Bot, User as UserIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SolicitacoesPendentes } from "./SolicitacoesPendentes";
 
 interface Appointment {
   id: string;
@@ -109,6 +110,9 @@ export function AgendamentosClient() {
     setRefreshTick((t) => t + 1);
   }, []);
 
+  const tabFromUrl = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab");
+  const [tab, setTab] = useState<"agendados" | "solicitacoes">(tabFromUrl === "solicitacoes" ? "solicitacoes" : "agendados");
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -116,7 +120,7 @@ export function AgendamentosClient() {
           <Calendar className="w-6 h-6 text-[#CC0000]" />
           <div>
             <h1 className="text-2xl font-semibold text-gray-800">Agendamentos</h1>
-            <p className="text-sm text-gray-500">Manutenções marcadas pelo Luma ou pelo time</p>
+            <p className="text-sm text-gray-500">Manutenções marcadas pela Luma ou pelo time</p>
           </div>
         </div>
         <button
@@ -128,6 +132,33 @@ export function AgendamentosClient() {
         </button>
       </div>
 
+      <div className="flex gap-2 mb-5 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setTab("agendados")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium border-b-2 -mb-px inline-flex items-center gap-2",
+            tab === "agendados" ? "border-[#CC0000] text-[#CC0000]" : "border-transparent text-gray-500 hover:text-gray-800"
+          )}
+        >
+          <Calendar className="w-4 h-4" /> Agendados
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("solicitacoes")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium border-b-2 -mb-px inline-flex items-center gap-2",
+            tab === "solicitacoes" ? "border-[#CC0000] text-[#CC0000]" : "border-transparent text-gray-500 hover:text-gray-800"
+          )}
+        >
+          <Clock className="w-4 h-4" /> Solicitações
+        </button>
+      </div>
+
+      {tab === "solicitacoes" && <SolicitacoesPendentes />}
+
+      {tab === "agendados" && (
+      <div>
       <div className="flex gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -219,6 +250,9 @@ export function AgendamentosClient() {
           </div>
         ))}
       </div>
+
+      </div>
+      )}
 
       {showCreate && <CreateModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); setRefreshTick((t) => t + 1); }} />}
     </div>

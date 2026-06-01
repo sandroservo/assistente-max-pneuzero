@@ -14,10 +14,10 @@ import { upsertVehicle } from "./vehicle";
 import { buscarProdutosPorDescricao } from "./pneuzero-stock";
 import {
   parseDateTimePtBr,
-  createAppointment,
   cancelAppointment,
   formatBR,
 } from "./appointments";
+import { createAppointmentRequest } from "./appointment-requests";
 import { postBotToGeneral } from "./team-bot";
 import { pushToActiveAgents } from "./web-push";
 
@@ -121,7 +121,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "agendar_servico",
       description:
-        "Cria agendamento de manutenção/serviço pro lead. USE APENAS APÓS confirmar verbalmente com o cliente a data, hora e serviço — passe `confirmadoPeloCliente=true` só se ele disse claramente 'sim, pode marcar' ou equivalente. Aceita data natural: 'amanhã 14h', 'sábado 10:00', '18/05 14h', '2026-05-18T14:00'. Posta alerta no canal Geral do chat interno automaticamente.",
+        "ATENÇÃO: esta tool NÃO confirma agendamento direto. Ela registra uma SOLICITAÇÃO PENDENTE pra equipe analisar disponibilidade. Você só chama APÓS o cliente confirmar verbalmente serviço+data+hora (`confirmadoPeloCliente=true`). Depois, AVISA o cliente: \"Vou encaminhar pra equipe confirmar disponibilidade e já te aviso\". NÃO diga \"agendamento confirmado\" — espere a equipe aprovar. Aceita data natural: 'amanhã 14h', 'sábado 10:00', '18/05 14h', ISO completo. Posta alerta no canal Geral + push pra equipe automaticamente.",
       parameters: {
         type: "object",
         properties: {
@@ -439,32 +439,25 @@ async function execAgendarServico(args: AgendarServicoArgs, ctx: ToolContext): P
 
   const vehicle = lead.vehicles[0] ?? null;
 
-  const appt = await createAppointment({
+  // Cria SOLICITAÇÃO pendente — equipe valida antes de virar Appointment real
+  const req = await createAppointmentRequest({
     organizationId: ctx.organizationId,
     leadId: ctx.leadId,
+    conversationId: ctx.conversationId,
     serviceName: args.servico,
-    scheduledAt: parsed.date,
+    requestedAt: parsed.date,
     vehicleId: vehicle?.id ?? ctx.vehicleId,
     notes: args.notas,
-    source: "bot",
   });
-
-  // Alerta canal Geral (fire-and-forget — não bloqueia resposta)
-  const clienteNome = lead.name || lead.phone;
-  const veiculo = vehicle
-    ? `\n🚗 ${[vehicle.marca, vehicle.modelo, vehicle.ano].filter(Boolean).join(" ")}${vehicle.placa ? ` (${vehicle.placa})` : ""}`
-    : "";
-  void postBotToGeneral(
-    ctx.organizationId,
-    `🗓️ *Novo agendamento*\n👤 ${clienteNome}\n📞 ${lead.phone}\n🔧 ${args.servico}\n📅 ${formatBR(parsed.date)}${veiculo}${args.notas ? `\n📝 ${args.notas}` : ""}`
-  );
 
   return JSON.stringify({
     ok: true,
-    appointmentId: appt.id,
+    requestId: req.id,
     quando: formatBR(parsed.date),
     servico: args.servico,
-    message: "Agendamento criado. Confirme pro cliente e fale que avisou o time.",
+    status: "pending_team_approval",
+    message:
+      "Solicitação registrada. AVISE o cliente: 'Vou encaminhar pros consultores confirmarem o horário e já te aviso por aqui certinho 🙂'. NÃO diga que está agendado — a equipe aprova antes.",
   });
 }
 

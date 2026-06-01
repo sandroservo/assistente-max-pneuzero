@@ -46,6 +46,13 @@ enum AppointmentSource {
   user
 }
 
+enum AppointmentRequestStatus {
+  pending // Luma criou, aguardando vendedor aprovar/recusar
+  approved // vendedor aprovou — gera Appointment + envia confirmação
+  rejected // vendedor recusou — manda alternativa pro cliente
+  cancelled_by_lead // cliente desistiu antes da equipe responder
+}
+
 model Organization {
   id           String   @id @default(cuid())
   name         String
@@ -69,6 +76,7 @@ model Organization {
   followUpRules    FollowUpRule[]
   teamMessages     TeamMessage[]
   appointments     Appointment[]
+  appointmentRequests AppointmentRequest[]
 }
 
 model User {
@@ -93,6 +101,7 @@ model User {
   teamChannelStates TeamChannelState[]
   appointments      Appointment[]      @relation("AppointmentCreatedBy")
   pushSubscriptions PushSubscription[]
+  appointmentRequestsResolved AppointmentRequest[] @relation("AppointmentRequestResolvedBy")
 
   @@index([organizationId])
   @@index([email])
@@ -213,6 +222,7 @@ model Lead {
   sales         Sale[]
   nps           NPSResponse[]
   appointments  Appointment[]
+  appointmentRequests AppointmentRequest[]
 
   @@unique([organizationId, phone]) // Phone único por organização
   @@index([organizationId])
@@ -700,6 +710,35 @@ model TeamChannelState {
 
   @@id([userId, channelKey])
   @@index([userId])
+}
+
+// Solicitação de agendamento criada pela Luma. Cliente pediu marcação no WhatsApp,
+// Luma valida com cliente, e em vez de gravar Appointment direto, registra esta
+// solicitação como `pending`. Equipe aprova/recusa pelo painel → gera Appointment.
+model AppointmentRequest {
+  id                String                   @id @default(cuid())
+  organizationId    String
+  leadId            String
+  conversationId    String? // pra responder via WhatsApp depois
+  vehicleId         String?
+  serviceItemId     String?
+  serviceName       String
+  requestedAt       DateTime // data/hora pedida pelo cliente
+  status            AppointmentRequestStatus @default(pending)
+  notes             String?                  @db.Text
+  resolvedById      String? // vendedor que aprovou/recusou
+  resolvedAt        DateTime?
+  resolvedNote      String?                  @db.Text // motivo do reject ou observação do approve
+  resultingAppointmentId String? // FK pro Appointment criado (se approved)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  resolvedBy   User?        @relation(name: "AppointmentRequestResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([organizationId, status, requestedAt])
+  @@index([leadId])
 }
 
 // Inscrição Web Push do navegador do vendedor — usada pra notificar handoffs
