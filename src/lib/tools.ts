@@ -508,7 +508,18 @@ async function execTransferirHumano(
     where: { conversationId: ctx.conversationId, status: "open" },
   });
   if (open) {
-    return JSON.stringify({ ok: true, handoffId: open.id, message: "Handoff já aberto" });
+    // Defensive: garante ownerType=human mesmo se handoff já existia (caso
+    // anterior tenha esquecido). Sem isso, próximo turno Luma volta a responder.
+    await prisma.lead.update({
+      where: { id: ctx.leadId },
+      data: { ownerType: "human", status: "HUMANO_SOLICITADO" },
+    }).catch(() => null);
+    return JSON.stringify({
+      ok: true,
+      handoffId: open.id,
+      action: "handoff_already_open",
+      message: "Handoff já estava aberto. Lead silenciado pra você. NÃO responda mais — atendente vai assumir.",
+    });
   }
 
   const handoff = await prisma.handoff.create({
@@ -522,9 +533,11 @@ async function execTransferirHumano(
     },
   });
 
+  // CRITICAL: ownerType=human bloqueia Luma de responder no próximo turno
+  // (webhook tem guard: if (lead.ownerType === "human") return)
   await prisma.lead.update({
     where: { id: ctx.leadId },
-    data: { status: "HUMANO_SOLICITADO" },
+    data: { ownerType: "human", status: "HUMANO_SOLICITADO" },
   });
 
   // Alerta vendedores no canal Geral do /equipe (fire-and-forget)
