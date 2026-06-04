@@ -91,13 +91,13 @@ export function NotificationProvider() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 max-w-sm pointer-events-none">
+    <div className="fixed bottom-4 right-4 z-[60] flex flex-col-reverse gap-2 max-w-sm pointer-events-none">
       {toasts.map((n) => {
         const Icon = ICON[n.kind] ?? Bell;
         const inner = (
           <div
             className={cn(
-              "flex items-start gap-3 rounded-lg border shadow-md p-3 pr-2 pointer-events-auto animate-in slide-in-from-right-4 duration-200",
+              "flex items-start gap-3 rounded-lg border shadow-md p-3 pr-2 pointer-events-auto animate-in slide-in-from-bottom-4 duration-200",
               ACCENT[n.kind]
             )}
             onClick={() => dismiss(n.id)}
