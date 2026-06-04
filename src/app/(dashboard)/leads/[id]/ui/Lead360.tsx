@@ -27,6 +27,8 @@ import {
   Calendar,
   Bot,
   AlertTriangle,
+  Brain,
+  RefreshCw,
 } from "lucide-react";
 
 interface Vehicle {
@@ -311,6 +313,7 @@ export function Lead360({ data }: { data: LeadData }) {
       <Tabs defaultValue="timeline">
         <TabsList>
           <TabsTrigger value="timeline"><Activity className="w-4 h-4 mr-1" /> Timeline</TabsTrigger>
+          <TabsTrigger value="sumario"><Brain className="w-4 h-4 mr-1" /> Sumário</TabsTrigger>
           <TabsTrigger value="veiculos"><Car className="w-4 h-4 mr-1" /> Veículos ({data.vehicles.length})</TabsTrigger>
           <TabsTrigger value="vendas"><DollarSign className="w-4 h-4 mr-1" /> Vendas ({data.sales.length})</TabsTrigger>
           <TabsTrigger value="nps"><Star className="w-4 h-4 mr-1" /> NPS ({data.nps.length})</TabsTrigger>
@@ -430,6 +433,10 @@ export function Lead360({ data }: { data: LeadData }) {
           </div>
         </TabsContent>
 
+        <TabsContent value="sumario">
+          <LeadSummary leadId={data.id} />
+        </TabsContent>
+
         <TabsContent value="agendamentos">
           <LeadAppointments leadId={data.id} />
         </TabsContent>
@@ -476,6 +483,84 @@ const APPT_STATUS_LABEL: Record<LeadAppointment["status"], string> = {
   cancelled: "Cancelado",
   no_show: "Não compareceu",
 };
+
+interface SummaryData {
+  summary: string | null;
+  summaryUpdatedAt: string | null;
+  messagesSinceSummary: number;
+  lastMessageAt: string | null;
+}
+
+function LeadSummary({ leadId }: { leadId: string }) {
+  const [data, setData] = useState<SummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      fetch(`/api/leads/${leadId}/summary`, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => { if (!cancelled) { setData(j); setLoading(false); } })
+        .catch(() => { if (!cancelled) setLoading(false); });
+    };
+    load();
+    const interval = setInterval(load, 30_000); // auto-refresh 30s
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [leadId]);
+
+  if (loading) {
+    return <Card><CardContent className="p-5 text-sm text-gray-500">Carregando sumário…</CardContent></Card>;
+  }
+
+  if (!data?.summary) {
+    return (
+      <Card>
+        <CardContent className="p-5 space-y-3">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Brain className="w-4 h-4" />
+            <span className="font-medium text-sm">Memória da conversa</span>
+          </div>
+          <p className="text-sm text-gray-500">
+            Sumário ainda não gerado. A Luma cria automaticamente após {20 - (data?.messagesSinceSummary ?? 0)} mensagem(ns).
+          </p>
+          {data && data.messagesSinceSummary > 0 && (
+            <p className="text-xs text-gray-400">
+              {data.messagesSinceSummary} mensagem(ns) desde último sumário.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const updatedFmt = data.summaryUpdatedAt
+    ? new Date(data.summaryUpdatedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  return (
+    <Card>
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-gray-700">
+            <Brain className="w-4 h-4" />
+            <span className="font-medium text-sm">Sumário rolante da conversa</span>
+          </div>
+          {updatedFmt && (
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> {updatedFmt}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{data.summary}</p>
+        <p className="text-xs text-gray-400 italic">
+          {data.messagesSinceSummary === 0
+            ? "Atualizado a partir do último ponto. Recalcula automaticamente a cada 20 novas mensagens."
+            : `${data.messagesSinceSummary} mensagem(ns) novas desde este sumário — próxima atualização em ${Math.max(0, 20 - data.messagesSinceSummary)}.`}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function LeadAppointments({ leadId }: { leadId: string }) {
   const [items, setItems] = useState<LeadAppointment[] | null>(null);
