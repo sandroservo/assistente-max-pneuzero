@@ -44,13 +44,19 @@ export async function createAppointmentRequest(input: CreateRequestInput) {
   // Alerta canal Geral + Web Push (fire-and-forget)
   const clienteNome = req.lead.name || req.lead.phone;
   const dataFmt = formatBR(input.requestedAt);
+  const shortId = req.id.slice(0, 8);
   const body =
     `🟡 *Solicitação de agendamento*\n` +
+    `ID: #${shortId}\n` +
     `👤 ${clienteNome}\n` +
     `📞 ${req.lead.phone}\n` +
     `🔧 ${req.serviceName}\n` +
     `📅 ${dataFmt}${input.notes ? `\n📝 ${input.notes}` : ""}\n\n` +
-    `Vá em /agendamentos → aba "Solicitações" pra aprovar ou recusar.`;
+    `Responda aqui no Geral:\n` +
+    `• aprovar ${shortId}\n` +
+    `• recusar ${shortId} motivo\n` +
+    `• oferecer ${shortId} novo horário\n\n` +
+    `Ou vá em /agendamentos → Solicitações.`;
 
   void postBotToGeneral(input.organizationId, body);
   void pushToActiveAgents(input.organizationId, {

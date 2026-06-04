@@ -10,10 +10,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { teamBus } from "@/lib/team-bus";
+import { postBotToGeneral } from "@/lib/team-bot";
 import {
   canonicalDmKey,
   sanitizeBody,
 } from "@/lib/team-chat";
+import { handleTeamAppointmentCommand } from "@/lib/team-appointment-commands";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -142,5 +144,32 @@ export async function POST(req: Request) {
     message: payload,
   });
 
-  return NextResponse.json({ message: payload });
+  let commandResult: Awaited<ReturnType<typeof handleTeamAppointmentCommand>> | null = null;
+  if (channel === "global") {
+    try {
+      commandResult = await handleTeamAppointmentCommand({
+        organizationId: session.user.organizationId,
+        userId: session.user.id,
+        text,
+      });
+
+      if (commandResult.handled && commandResult.message) {
+        const prefix = commandResult.ok ? "✅" : "⚠️";
+        await postBotToGeneral(session.user.organizationId, `${prefix} ${commandResult.message}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      commandResult = {
+        handled: true,
+        ok: false,
+        message: msg,
+      };
+      await postBotToGeneral(
+        session.user.organizationId,
+        `⚠️ Não consegui resolver esse comando de agendamento: ${msg}`
+      );
+    }
+  }
+
+  return NextResponse.json({ message: payload, commandResult });
 }

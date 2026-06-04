@@ -168,7 +168,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "transferir_humano",
       description:
-        "Cria handoff para um vendedor humano. Use quando: lead pede atendente, lead pede agendamento concreto, cotação está pronta para fechamento, ou há dúvida técnica complexa.",
+        "Cria handoff para um vendedor humano. Use quando: lead pede explicitamente um atendente, cotação está pronta para negociação humana, há dúvida técnica complexa, ou falta informação crítica. NÃO use para agendamento com serviço+data+hora claros; nesse caso use agendar_servico.",
       parameters: {
         type: "object",
         properties: {
