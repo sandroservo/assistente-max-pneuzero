@@ -9,7 +9,8 @@ import OpenAI from "openai";
 import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
 import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
-import { getAllMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
+import { searchRelevantMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
+import { getConversationSummary } from "./conversation-summary";
 import { extractVehicleData } from "./extractors";
 import { upsertVehicle, getVehiclesByLead, formatVehiclesForAI } from "./vehicle";
 import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "./tools";
@@ -204,9 +205,15 @@ export async function generateAIResponse(
     }
     const toolInformation = formatKnowledgeForAI(knowledge);
 
-    // Busca memórias do lead
-    const leadMemories = await getAllMemories(context.leadId);
+    // Busca memórias do lead — FTS rankeia por relevância à mensagem atual,
+    // fallback pra recentes se query muito curta. Cap 12 itens.
+    const leadMemories = await searchRelevantMemories(context.leadId, userMessage, 12);
     const memoryContext = formatMemoriesForAI(leadMemories);
+
+    // Sumário rolante da conversa (atualizado a cada 20 msgs por job background)
+    const conversationSummary = context.conversationId
+      ? await getConversationSummary(context.conversationId)
+      : null;
 
     // Verifica se a última mensagem do bot perguntou o nome
     const lastBotMessage = context.messageHistory
@@ -264,7 +271,16 @@ export async function generateAIResponse(
       });
     }
 
-    // Adiciona memórias do lead
+    // Sumário rolante: dá contexto longo em texto compacto. Custa pouco token,
+    // permite Luma "lembrar" de conversa anterior sem dumpar todo histórico.
+    if (conversationSummary) {
+      messages.push({
+        role: "system",
+        content: `<ConversationSummary>\n${conversationSummary}\n</ConversationSummary>\n\nUse este sumário pra retomar contexto. Não repita o que já foi tratado.`,
+      });
+    }
+
+    // Adiciona memórias do lead (top-12 rankeadas por FTS)
     if (memoryContext) {
       messages.push({
         role: "system",

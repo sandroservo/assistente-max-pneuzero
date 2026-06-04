@@ -265,6 +265,11 @@ model Conversation {
   remoteJid     String
   lastMessageAt DateTime?
   unreadCount   Int       @default(0)
+  // Memória rolante: a cada N msgs, LLM resume conversa em `summary`.
+  // ai.ts usa `summary` + últimas 10 msgs + memórias FTS-rankeadas.
+  summary              String?   @db.Text
+  summaryUpdatedAt     DateTime?
+  messagesSinceSummary Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

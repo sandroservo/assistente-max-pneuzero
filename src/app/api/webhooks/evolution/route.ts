@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
 import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64, EvolutionInvalidNumberError, wasRecentBotSend } from "@/lib/evolution";
+import { bumpMessageCount, maybeUpdateSummary } from "@/lib/conversation-summary";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { saveMedia } from "@/lib/media-storage";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
@@ -235,6 +236,11 @@ export async function POST(req: Request) {
         sentAt: new Date(),
       },
     });
+
+    // Memória rolante: incrementa contador + dispara sumário se passou do limite.
+    // Fire-and-forget pra não bloquear resposta.
+    await bumpMessageCount(conversation.id);
+    void maybeUpdateSummary(conversation.id);
 
     // Mensagem enviada pelo atendente (fromMe): humano assumiu a conversa — bot não responde até "Devolver ao Bot"
     if (fromMe) {

@@ -94,6 +94,84 @@ export async function getAllMemories(
 }
 
 /**
+ * Busca memórias do lead RELEVANTES pra mensagem atual via FTS5 (Postgres
+ * tsvector). Ranking por ts_rank_cd; fallback pra getAllMemories se query
+ * vazia/curta. Usa search_vector criado via migration GENERATED ALWAYS.
+ */
+export async function searchRelevantMemories(
+  leadId: string,
+  query: string,
+  limit = 10
+): Promise<LeadMemoryItem[]> {
+  const q = query?.trim() ?? "";
+  if (q.length < 3) {
+    // Query muito curta — devolve memórias recentes (cap em limit)
+    return prisma.leadMemory.findMany({
+      where: { leadId },
+      orderBy: { updatedAt: "desc" },
+      take: limit,
+    });
+  }
+
+  // plainto_tsquery aceita texto livre, tokeniza e converte em & operators.
+  // Coalesce com `:*` permite match parcial nos termos.
+  try {
+    const rows = await prisma.$queryRaw<LeadMemoryItem[]>`
+      SELECT id, "leadId", type, key, value, "createdAt", "updatedAt"
+      FROM "LeadMemory"
+      WHERE "leadId" = ${leadId}
+        AND "search_vector" @@ plainto_tsquery('portuguese', ${q})
+      ORDER BY ts_rank_cd("search_vector", plainto_tsquery('portuguese', ${q})) DESC,
+               "updatedAt" DESC
+      LIMIT ${limit}
+    `;
+    if (rows.length > 0) return rows;
+  } catch (err) {
+    console.error("[memory] FTS falhou, fallback pra recent:", err);
+  }
+  return prisma.leadMemory.findMany({
+    where: { leadId },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+  });
+}
+
+/**
+ * Busca mensagens RELEVANTES da conversa pra dada query.
+ * Usado quando contexto recente não basta — Luma precisa lembrar de algo
+ * dito 30 mensagens atrás.
+ */
+export interface RelevantMessage {
+  id: string;
+  body: string | null;
+  direction: string;
+  createdAt: Date;
+}
+
+export async function searchRelevantMessages(
+  conversationId: string,
+  query: string,
+  limit = 5
+): Promise<RelevantMessage[]> {
+  const q = query?.trim() ?? "";
+  if (q.length < 3) return [];
+  try {
+    return await prisma.$queryRaw<RelevantMessage[]>`
+      SELECT id, body, direction::text AS direction, "createdAt"
+      FROM "Message"
+      WHERE "conversationId" = ${conversationId}
+        AND "search_vector" @@ plainto_tsquery('portuguese', ${q})
+      ORDER BY ts_rank_cd("search_vector", plainto_tsquery('portuguese', ${q})) DESC,
+               "createdAt" DESC
+      LIMIT ${limit}
+    `;
+  } catch (err) {
+    console.error("[memory] searchRelevantMessages falhou:", err);
+    return [];
+  }
+}
+
+/**
  * Remove uma memória específica
  */
 export async function deleteMemory(leadId: string, key: string): Promise<void> {
