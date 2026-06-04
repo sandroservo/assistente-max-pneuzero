@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
 import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64, EvolutionInvalidNumberError, wasRecentBotSend } from "@/lib/evolution";
 import { bumpMessageCount, maybeUpdateSummary } from "@/lib/conversation-summary";
+import { publishNotif } from "@/lib/notifications-bus";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { saveMedia } from "@/lib/media-storage";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
@@ -168,6 +169,18 @@ export async function POST(req: Request) {
         lastMessageAt: new Date(),
       },
     });
+
+    // Toast in-app: lead novo (createdAt nos últimos 10s, e msg recebida — não eco)
+    const isFreshLead = Date.now() - new Date(lead.createdAt).getTime() < 10_000;
+    if (isFreshLead && !fromMe) {
+      publishNotif({
+        organizationId,
+        kind: "lead_new",
+        title: `Novo lead: ${lead.name || lead.phone}`,
+        body: text ? text.slice(0, 120) : undefined,
+        url: `/leads/${lead.id}`,
+      });
+    }
 
     // Backfill name/avatarUrl quando ainda vazios (sem race — update por id)
     const needsName = clientPushName && !lead.name;

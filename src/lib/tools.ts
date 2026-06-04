@@ -20,6 +20,7 @@ import {
 import { createAppointmentRequest } from "./appointment-requests";
 import { postBotToGeneral } from "./team-bot";
 import { pushToActiveAgents } from "./web-push";
+import { publishNotif } from "./notifications-bus";
 
 export interface ToolContext {
   leadId: string;
@@ -558,6 +559,14 @@ async function execTransferirHumano(
       url: "/equipe",
       tag: `handoff-${handoff.id}`,
       requireInteraction: true,
+    });
+    // Toast in-app
+    publishNotif({
+      organizationId: ctx.organizationId,
+      kind: "handoff",
+      title: `Handoff: ${clienteNome}`,
+      body: args.motivo,
+      url: `/leads/${ctx.leadId}`,
     });
   }
 

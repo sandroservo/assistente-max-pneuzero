@@ -10,6 +10,7 @@ import { createAppointment, formatBR } from "./appointments";
 import { evolutionSendText } from "./evolution";
 import { postBotToGeneral } from "./team-bot";
 import { pushToActiveAgents } from "./web-push";
+import { publishNotif } from "./notifications-bus";
 
 export interface CreateRequestInput {
   organizationId: string;
@@ -58,6 +59,13 @@ export async function createAppointmentRequest(input: CreateRequestInput) {
     url: "/agendamentos?tab=solicitacoes",
     tag: `appt-request-${req.id}`,
     requireInteraction: true,
+  });
+  publishNotif({
+    organizationId: input.organizationId,
+    kind: "appointment_request",
+    title: `Pedido de agendamento — ${clienteNome}`,
+    body: `${req.serviceName} • ${dataFmt}`,
+    url: "/agendamentos?tab=solicitacoes",
   });
 
   return req;
