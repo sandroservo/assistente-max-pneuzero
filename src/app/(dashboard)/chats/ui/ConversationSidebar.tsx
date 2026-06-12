@@ -7,8 +7,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Search, Bot, UserCheck, MessageSquare, Mic, Image as ImageIcon, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LeadAvatar } from "@/components/LeadAvatar";
@@ -29,7 +30,11 @@ interface Conversation {
   lastMessageType: string;
   lastMessageDirection: string;
   assignedAgent?: { id: string; name: string; avatar: string | null } | null;
+  assignedUserId?: string | null;
+  handoffOpen?: boolean;
 }
+
+type FilterTab = "aguardando" | "minhas" | "atendimento" | "todas";
 
 interface ConversationSidebarProps {
   initialConversations: Conversation[];
@@ -127,8 +132,11 @@ export default function ConversationSidebar({
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState(initialConversations);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<FilterTab>("todas");
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const prevUnreadMapRef = useRef<Map<string, number>>(new Map());
   const isFirstFetchRef = useRef(true);
   const [toastConv, setToastConv] = useState<Conversation | null>(null);
@@ -229,8 +237,29 @@ export default function ConversationSidebar({
     return () => { document.title = "Luma Assistente"; };
   }, [totalUnread]);
 
-  // Filtra conversas pela busca
+  // Conta por aba (independente da busca)
+  const tabCounts = useMemo(() => {
+    let aguardando = 0;
+    let minhas = 0;
+    let atendimento = 0;
+    for (const c of conversations) {
+      const isAguardando = c.handoffOpen && !c.assignedUserId;
+      const isMinha = !!currentUserId && c.assignedUserId === currentUserId;
+      const isAtendimento = !!c.assignedUserId;
+      if (isAguardando) aguardando++;
+      if (isMinha) minhas++;
+      if (isAtendimento) atendimento++;
+    }
+    return { aguardando, minhas, atendimento };
+  }, [conversations, currentUserId]);
+
+  // Filtra por tab + busca
   const filtered = conversations.filter((c) => {
+    // Tab filter
+    if (tab === "aguardando" && !(c.handoffOpen && !c.assignedUserId)) return false;
+    if (tab === "minhas" && c.assignedUserId !== currentUserId) return false;
+    if (tab === "atendimento" && !c.assignedUserId) return false;
+    // Busca
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -276,6 +305,30 @@ export default function ConversationSidebar({
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-500 transition-colors"
             aria-label="Buscar conversa por nome ou telefone"
           />
+        </div>
+        {/* Tabs de filtro */}
+        <div className="flex gap-1 mt-2 text-xs overflow-x-auto">
+          {([
+            { id: "todas" as FilterTab, label: "Todas", count: conversations.length },
+            { id: "aguardando" as FilterTab, label: "Aguardando", count: tabCounts.aguardando },
+            { id: "minhas" as FilterTab, label: "Minhas", count: tabCounts.minhas },
+            { id: "atendimento" as FilterTab, label: "Em atendimento", count: tabCounts.atendimento },
+          ]).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition",
+                tab === t.id
+                  ? "bg-[#CC0000] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+            >
+              {t.label}
+              {t.count > 0 && <span className="ml-1 opacity-80">({t.count})</span>}
+            </button>
+          ))}
         </div>
       </div>
 

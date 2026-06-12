@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import HandoffButton from "./HandoffButton";
+import AssignButton from "./AssignButton";
 import ClienteParouResponderButton from "./ClienteParouResponderButton";
 import LeadActions from "./LeadActions";
 import { LeadAvatar } from "@/components/LeadAvatar";
@@ -46,6 +47,7 @@ interface LeadSidebarProps {
     leadScore: number;
     summary: string | null;
     tags: Tag[];
+    assignedUser?: { id: string; name: string; avatar: string | null } | null;
   };
   conversationId: string;
   isOpen: boolean;
@@ -211,6 +213,11 @@ export default function LeadSidebar({
 
       {/* Actions */}
       <div className="px-4 py-3 space-y-2">
+        <AssignButton
+          leadId={lead.id}
+          assignedUser={lead.assignedUser ?? null}
+          onToast={(msg) => onToast?.(msg, "info")}
+        />
         <HandoffButton
           leadId={lead.id}
           isHuman={lead.ownerType === "human"}

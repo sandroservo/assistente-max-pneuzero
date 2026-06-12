@@ -24,6 +24,7 @@ export default async function ChatDetailPage({
       lead: {
         include: {
           tags: { select: { id: true, name: true, color: true } },
+          assignedUser: { select: { id: true, name: true, avatar: true } },
         },
       },
       messages: {
@@ -57,6 +58,7 @@ export default async function ChatDetailPage({
     summary: convo.lead.summary,
     notes: convo.lead.notes,
     tags: convo.lead.tags,
+    assignedUser: (convo.lead as any).assignedUser ?? null,
   };
 
   const messages = (convo.messages as any[]).map((m) => ({

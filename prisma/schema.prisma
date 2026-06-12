@@ -102,6 +102,7 @@ model User {
   appointments      Appointment[]      @relation("AppointmentCreatedBy")
   pushSubscriptions PushSubscription[]
   appointmentRequestsResolved AppointmentRequest[] @relation("AppointmentRequestResolvedBy")
+  assignedLeads     Lead[]             @relation("LeadAssignedTo")
 
   @@index([organizationId])
   @@index([email])
@@ -211,7 +212,11 @@ model Lead {
   cpf            String? // Opcional, para nota fiscal
   followUpOptOut Boolean @default(false) // Lead pediu para não receber follow-up
 
+  assignedUserId String? // Vendedor que assumiu a conversa (fila de atendimento)
+  assignedAt     DateTime? // Quando foi assumido
+
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedUser  User?          @relation("LeadAssignedTo", fields: [assignedUserId], references: [id])
   conversations Conversation[]
   followUps     FollowUp[]
   handoffs      Handoff[]

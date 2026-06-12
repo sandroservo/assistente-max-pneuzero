@@ -15,7 +15,11 @@ export async function GET() {
     const convos = await prisma.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
       include: {
-        lead: true,
+        lead: {
+          include: {
+            assignedUser: { select: { id: true, name: true, avatar: true } },
+          },
+        },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -45,13 +49,17 @@ export async function GET() {
     const conversations = uniqueConvos.map((c: (typeof uniqueConvos)[number]) => {
       const lastMsg = (c as any).messages?.[0] ?? null;
       const activeHandoff = (c as any).handoffs?.[0] ?? null;
-      const assignedAgent = activeHandoff?.assignedTo
-        ? {
-            id: activeHandoff.assignedTo.id,
-            name: activeHandoff.assignedTo.name,
-            avatar: activeHandoff.assignedTo.avatar,
-          }
-        : null;
+      const leadAssigned = (c.lead as any).assignedUser ?? null;
+      const assignedAgent = leadAssigned
+        ? { id: leadAssigned.id, name: leadAssigned.name, avatar: leadAssigned.avatar }
+        : activeHandoff?.assignedTo
+          ? {
+              id: activeHandoff.assignedTo.id,
+              name: activeHandoff.assignedTo.name,
+              avatar: activeHandoff.assignedTo.avatar,
+            }
+          : null;
+      const handoffOpen = !!activeHandoff && activeHandoff.status === "open";
       return {
         id: c.id,
         leadId: c.leadId,
@@ -68,6 +76,8 @@ export async function GET() {
         lastMessageType: lastMsg?.type ?? "text",
         lastMessageDirection: lastMsg?.direction ?? "in",
         assignedAgent,
+        assignedUserId: (c.lead as any).assignedUserId ?? null,
+        handoffOpen,
       };
     });
 

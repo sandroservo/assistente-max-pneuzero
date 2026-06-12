@@ -58,6 +58,7 @@ interface Lead {
   summary: string | null;
   notes: string | null;
   tags: Tag[];
+  assignedUser?: { id: string; name: string; avatar: string | null } | null;
 }
 
 interface ChatPageClientProps {
