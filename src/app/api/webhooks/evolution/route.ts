@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
 import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64, EvolutionInvalidNumberError, wasRecentBotSend } from "@/lib/evolution";
 import { bumpMessageCount, maybeUpdateSummary } from "@/lib/conversation-summary";
+import { resetSilenceCounter } from "@/lib/silence-follow-up";
 import { publishNotif } from "@/lib/notifications-bus";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { saveMedia } from "@/lib/media-storage";
@@ -254,6 +255,11 @@ export async function POST(req: Request) {
     // Fire-and-forget pra não bloquear resposta.
     await bumpMessageCount(conversation.id);
     void maybeUpdateSummary(conversation.id);
+
+    // Cliente voltou a responder → zera contador de follow-up de silêncio
+    if (!fromMe) {
+      void resetSilenceCounter(conversation.id);
+    }
 
     // Mensagem enviada pelo atendente (fromMe): humano assumiu a conversa — bot não responde até "Devolver ao Bot"
     if (fromMe) {

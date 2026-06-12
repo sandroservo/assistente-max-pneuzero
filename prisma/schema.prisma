@@ -275,6 +275,11 @@ model Conversation {
   summary              String?   @db.Text
   summaryUpdatedAt     DateTime?
   messagesSinceSummary Int       @default(0)
+  // Follow-up automático: cliente parou de responder → Luma toca de novo
+  // a cada 2min, até 5 tentativas. Reseta quando cliente volta a falar.
+  silenceFollowupCount Int       @default(0)
+  silenceLastTryAt     DateTime?
+  silenceAbandonedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
