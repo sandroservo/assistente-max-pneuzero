@@ -307,19 +307,19 @@ export default function ConversationSidebar({
           />
         </div>
         {/* Tabs de filtro */}
-        <div className="flex gap-1 mt-2 text-xs overflow-x-auto">
+        <div className="flex flex-wrap gap-1 mt-2 text-[11px]">
           {([
             { id: "todas" as FilterTab, label: "Todas", count: conversations.length },
-            { id: "aguardando" as FilterTab, label: "Aguardando", count: tabCounts.aguardando },
             { id: "minhas" as FilterTab, label: "Minhas", count: tabCounts.minhas },
-            { id: "atendimento" as FilterTab, label: "Em atendimento", count: tabCounts.atendimento },
+            { id: "aguardando" as FilterTab, label: "Aguardando", count: tabCounts.aguardando },
+            { id: "atendimento" as FilterTab, label: "Atendimento", count: tabCounts.atendimento },
           ]).map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
               className={cn(
-                "px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition",
+                "px-2 py-0.5 rounded-full font-medium whitespace-nowrap transition",
                 tab === t.id
                   ? "bg-[#CC0000] text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
