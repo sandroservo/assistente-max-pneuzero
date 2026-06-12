@@ -64,10 +64,10 @@ export async function findSilentConversations(limit = 30): Promise<EligibleConve
       AND c."silenceFollowupCount" < ${MAX_ATTEMPTS}
       AND last_msg.direction::text = 'out'
       AND c."lastMessageAt" IS NOT NULL
-      AND c."lastMessageAt" < NOW() - INTERVAL '${SILENCE_GAP_MINUTES} minutes'
+      AND c."lastMessageAt" < NOW() - make_interval(mins := ${SILENCE_GAP_MINUTES})
       AND (
         c."silenceLastTryAt" IS NULL
-        OR c."silenceLastTryAt" < NOW() - INTERVAL '${SILENCE_GAP_MINUTES} minutes'
+        OR c."silenceLastTryAt" < NOW() - make_interval(mins := ${SILENCE_GAP_MINUTES})
       )
     ORDER BY c."lastMessageAt" ASC
     LIMIT ${limit}
