@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutorial Luma — Pneuzero | Vídeo da Equipe</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --side:#0c1726; --side2:#10233a; --red:#e01b22; --red2:#ef3a3a;
+    --text:#1f2937; --muted:#6b7280; --border:#e6e8ec; --green:#16a34a; --amber:#d97706;
+    --blue:#2563eb; --purple:#7c3aed; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#0a0f17;color:var(--text);
+    font-family:Inter,"Segoe UI",system-ui,-apple-system,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  #player{position:fixed;inset:0;display:flex;flex-direction:column}
+  #stagewrap{flex:1;display:flex;align-items:center;justify-content:center;padding:18px;min-height:0}
+  #stage{position:relative;width:100%;max-width:1280px;aspect-ratio:1568/744;background:var(--bg);
+    border-radius:14px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);border:1px solid #1d2735}
+  .app{position:absolute;inset:0;display:flex;font-size:13px}
+  .sb{width:14.5%;min-width:150px;background:var(--side);color:#cbd5e1;display:flex;flex-direction:column;padding:10px}
+  .logo{background:#0a131f;border:1px solid #1b2a3d;border-radius:14px;height:84px;margin:4px 4px 12px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .logo .l1{font-weight:800;letter-spacing:1px;font-size:11px;color:#fff}
+  .logo .l2{font-weight:900;font-size:20px;color:#fff;line-height:1;display:flex;align-items:center;gap:4px}
+  .logo .l2 b{color:var(--red2)}
+  .sb .cap{font-size:8px;letter-spacing:1px;color:#5b6b80;margin:8px 6px 6px}
+  .nav{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:9px;color:#aeb9c7;font-weight:600;font-size:12px}
+  .nav svg{width:15px;height:15px;flex:none;stroke:#9aa6b5;stroke-width:1.9;fill:none}
+  .nav.active{background:var(--red);color:#fff}
+  .nav.active svg{stroke:#fff}
+  .sb .foot{margin-top:auto;display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #1b2a3d;border-radius:10px}
+  .sb .foot .av{width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px}
+  .sb .foot small{color:#7fd18b;font-size:9px}
+  .sb .foot b{font-size:11px;color:#e5e7eb}
+  .ct{flex:1;background:var(--bg);overflow:hidden;position:relative}
+  .ct .pad{padding:16px 20px}
+  .h1{font-size:20px;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
+  .sub{color:var(--muted);font-size:12px;margin:2px 0 0}
+  .row{display:flex;gap:12px}
+  .grid{display:grid;gap:12px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px}
+  .kpi .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex:none}
+  .kpi .big{font-size:21px;font-weight:800;line-height:1}
+  .kpi .lbl{font-size:11px;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px}
+  .btnRed{background:var(--red);color:#fff;border:none;border-radius:9px;padding:8px 13px;font-weight:700;font-size:12px}
+  .badge{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap}
+  .b-amber{background:#fef3c7;color:#92400e}.b-green{background:#dcfce7;color:#166534}
+  .b-blue{background:#dbeafe;color:#1e40af}.b-red{background:#fee2e2;color:#991b1b}
+  .b-gray{background:#eef1f4;color:#475569}.b-purple{background:#ede9fe;color:#5b21b6}
+  .chip{font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;background:#fff;border:1px solid var(--border);color:#475569}
+  .chip.on{background:var(--red);color:#fff;border-color:var(--red)}
+  .scl{height:7px;border-radius:6px;background:#eef1f4;overflow:hidden}
+  .scl > i{display:block;height:100%;background:var(--red)}
+  .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:11px;flex:none}
+  .hl{outline:3px solid var(--red);outline-offset:3px;border-radius:10px;
+    box-shadow:0 0 0 6px rgba(224,27,34,.18),0 10px 30px rgba(224,27,34,.25);
+    animation:pulse 1.4s ease-in-out infinite;position:relative;z-index:5}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 5px rgba(224,27,34,.15)}50%{box-shadow:0 0 0 11px rgba(224,27,34,.05)}}
+  #cap{position:absolute;left:0;right:0;bottom:0;padding:16px 22px 18px;
+    background:linear-gradient(to top,rgba(7,12,20,.92),rgba(7,12,20,.0));color:#fff;font-size:15px;line-height:1.45;
+    min-height:74px;display:flex;align-items:flex-end}
+  #cap span{max-width:980px}
+  #scenebadge{position:absolute;top:12px;left:14px;background:rgba(7,12,20,.72);color:#fff;
+    font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;letter-spacing:.3px;z-index:9}
+  #bar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#0a0f17;color:#cbd5e1;border-top:1px solid #1b2533}
+  #bar button{background:#16202e;color:#e5e7eb;border:1px solid #243042;border-radius:9px;padding:8px 12px;font-weight:700;font-size:13px;cursor:pointer}
+  #bar button:hover{background:#1d2a3a}
+  #bar button.primary{background:var(--red);border-color:var(--red);color:#fff}
+  #prog{flex:1;height:7px;background:#1b2533;border-radius:6px;overflow:hidden}
+  #prog > i{display:block;height:100%;width:0;background:var(--red);transition:width .25s}
+  #tlabel{font-size:12px;color:#8b98a8;min-width:96px;text-align:right;font-variant-numeric:tabular-nums}
+  #chapters{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;background:#0a0f17;border-top:1px solid #11181f}
+  #chapters .ch{font-size:11px;color:#9aa6b5;background:#121b27;border:1px solid #1d2735;padding:5px 9px;border-radius:7px;white-space:nowrap;cursor:pointer}
+  #chapters .ch.cur{background:var(--red);color:#fff;border-color:var(--red)}
+  #chapters .ch.done{color:#6b7280}
+  #start{position:absolute;inset:0;background:rgba(7,12,20,.93);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;color:#fff;z-index:30;padding:24px}
+  #start h2{font-size:26px;margin:0 0 6px}
+  #start p{color:#aeb9c7;max-width:520px;margin:6px 0 20px;line-height:1.5}
+  #start .play{background:var(--red);border:none;color:#fff;width:78px;height:78px;border-radius:50%;font-size:30px;cursor:pointer;box-shadow:0 12px 40px rgba(224,27,34,.5)}
+  #start .opts{margin-top:18px;display:flex;gap:14px;align-items:center;color:#cbd5e1;font-size:13px}
+  #start label{display:flex;align-items:center;gap:7px;cursor:pointer}
+  @media (max-width:680px){#cap{font-size:13px}#bar button{padding:7px 9px;font-size:12px}#tlabel{display:none}}
+</style>
+</head>
+<body>
+<div id="player">
+  <div id="stagewrap">
+    <div id="stage">
+      <div id="scenebadge">—</div>
+      <div class="app" id="app"></div>
+      <div id="cap"><span id="captxt"></span></div>
+      <div id="start">
+        <h2>🏁 Tutorial da Luma — Pneuzero</h2>
+        <p>Como usar a assistente de WhatsApp no dia a dia: atender, assumir conversas, mover o funil e aprovar agendamentos. Narrado em português. ~14 min.</p>
+        <button class="play" id="bigplay" title="Iniciar">▶</button>
+        <div class="opts">
+          <label><input type="checkbox" id="voicechk" checked> Narração por voz</label>
+          <span>•</span><span>Use ⏯ Espaço, ← →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="bar">
+    <button id="prev" title="Cena anterior">⏮</button>
+    <button id="play" class="primary" title="Play/Pause">⏸</button>
+    <button id="next" title="Próxima cena">⏭</button>
+    <div id="prog"><i></i></div>
+    <div id="tlabel">Cena 1/14</div>
+    <button id="mute" title="Mudo">🔊</button>
+  </div>
+  <div id="chapters"></div>
+</div>
+
+<script>
+const I = {
+  dash:'<path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>',
+  chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  team:'<circle cx="9" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M17 7a3 3 0 0 1 0 6"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  contacts:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="2.4"/><path d="M8 17a4 4 0 0 1 8 0"/>',
+  kanban:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v12"/>',
+  book:'<path d="M4 5a2 2 0 0 1 2-2h12v17H6a2 2 0 0 0-2 2zM18 3v17"/>',
+  users:'<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 4a3 3 0 0 1 0 8"/>',
+  report:'<path d="M3 3v18h18"/><path d="M7 14v4M12 9v9M17 5v13"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+  fold:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>'
+};
+function svg(p){return '<svg viewBox="0 0 24 24">'+p+'</svg>';}
+
+const NAVITEMS = [
+  ['dashboard','Dashboard',I.dash],['chats','Chats',I.chat],['equipe','Equipe',I.team],
+  ['agendamentos','Agendamentos',I.cal],['contatos','Contatos',I.contacts],['kanban','Kanban',I.kanban],
+  ['conhecimento','Conhecimento',I.book],['usuarios','Usuários',I.users],
+  ['relatorios','Relatórios',I.report],['config','Configurações',I.gear]
+];
+function sidebar(active){
+  let nav = NAVITEMS.map(n=>`<div class="nav ${n[0]===active?'active':''}" id="nav-${n[0]}">${svg(n[2])}<span>${n[1]}</span></div>`).join('');
+  return `<div class="sb">
+    <div class="logo"><div class="l1">AUTO CENTER</div><div class="l2">PNEU<b>ZERO</b> 🏁</div></div>
+    <div class="nav" style="color:#8895a6">${svg(I.fold)}<span>Recolher</span></div>
+    <div class="cap">MENU DE NAVEGAÇÃO</div>
+    ${nav}
+    <div class="foot"><div class="av">L</div><div><b>Luma Assistente</b><br><small>● Online</small></div></div>
+  </div>`;
+}
+function frame(active, inner){ return sidebar(active) + `<div class="ct">${inner}</div>`; }
+function avatar(txt,color){return `<div class="av" style="background:${color}">${txt}</div>`;}
+
+const Screens = {
+  dashboard(){return frame('dashboard',`<div class="pad">
+    <div style="font-size:11px;color:#9aa6b5;margin-bottom:8px">Home › Dashboard</div>
+    <div class="row" id="d-kpis" style="margin-bottom:12px">
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--blue)">👥</div><div><div class="big">5</div><div class="lbl">Total de Leads</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:#14b8a6">💬</div><div><div class="big">5</div><div class="lbl">Conversas</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--amber)">🕑</div><div><div class="big">0</div><div class="lbl">Novos Leads</div></div></div>
+    </div>
+    <div class="row" id="d-kpis2" style="margin-bottom:14px">
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--green)">$</div><div><div class="big">R$ 0,00</div><div class="lbl">Vendas no mês</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--amber)">★</div><div><div class="big">—</div><div class="lbl">NPS médio (mês)</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--blue)">🔔</div><div><div class="big">0</div><div class="lbl">Follow-ups pendentes</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--purple)">🚗</div><div><div class="big">7</div><div class="lbl">Veículos cadastrados</div></div></div>
+    </div>
+    <div class="row">
+      <div class="card" style="flex:1.6;padding:14px" id="d-chart">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>Clientes ativos</b><button class="btnRed">Ver conversas</button></div>
+        <div style="font-size:11px;color:var(--muted);margin:8px 0 12px">🔴 5 novos leads (30d) &nbsp; ⚫ 230 mensagens (30d)</div>
+        <svg viewBox="0 0 520 150" style="width:100%;height:120px">
+          <polyline fill="none" stroke="#e01b22" stroke-width="2" points="0,120 60,118 120,119 200,90 280,95 340,60 400,70 460,30 520,40"/>
+          <line x1="0" y1="140" x2="520" y2="140" stroke="#e5e7eb"/>
+        </svg>
+        <div style="font-size:10px;color:#9aa6b5;letter-spacing:1px;margin-top:6px">LEADS POR STATUS</div>
+      </div>
+      <div class="card" style="flex:1;padding:14px" id="d-atend">
+        <b>Atendimento</b>
+        <div style="display:flex;flex-direction:column;gap:11px;margin-top:12px">
+          <div style="display:flex;gap:9px;align-items:center">${avatar('GC','#0ea5e9')}<div><b style="font-size:12px">Gustavo Chaves</b><br><span style="font-size:10px;color:var(--muted)">Em atendimento</span></div></div>
+          <div style="display:flex;gap:9px;align-items:center">${avatar('SS','#f59e0b')}<div><b style="font-size:12px">Sandro Servo</b><br><span style="font-size:10px;color:var(--muted)">Em atendimento</span></div></div>
+          <div style="display:flex;gap:9px;align-items:center">${avatar('MT','#e01b22')}<div><b style="font-size:12px">Marcelo Torres</b><br><span style="font-size:10px;color:var(--muted)">Qualificado</span></div></div>
+        </div>
+        <button class="btnRed" style="width:100%;margin-top:12px;background:#fff;color:#334155;border:1px solid var(--border)">Ir para atendimento</button>
+      </div>
+    </div>
+  </div>`);},
+
+  chatsList(){return frame('chats', chatLayout(`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#9aa6b5;gap:10px">
+      <div style="width:64px;height:64px;border-radius:50%;background:#fde2e2;display:flex;align-items:center;justify-content:center;font-size:26px">💬</div>
+      <b style="color:#374151">Selecione uma conversa</b>
+      <span style="font-size:12px">Escolha uma conversa na lista ao lado</span>
+    </div>`));},
+
+  chatThread(){return frame('chats', chatLayout(`
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fff" id="c-head">
+      ${avatar('GC','#e01b22')}
+      <div><b>Gustavo Chaves</b> <span class="badge b-amber">Em Atendimento</span> <span class="badge b-red">170</span><br>
+      <span style="font-size:11px;color:var(--muted)">📞 559991823241 · visto 12/06 19:19</span></div>
+      <div style="margin-left:auto;display:flex;gap:8px" id="c-actions">
+        <button class="chip" id="c-assumir" style="border-color:#fca5a5;color:#b91c1c">👥 Assumir</button>
+        <button class="chip" style="border-color:#fde68a;color:#b45309">⏸ Parou responder</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:24px;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px;background:#fff">
+      <b style="color:var(--red);border-bottom:2px solid var(--red);padding-bottom:6px">Conversa</b>
+      <span style="color:var(--muted)">Detalhes</span><span style="color:var(--muted)">Anotações</span><span style="color:var(--muted)">Histórico</span>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:14px 16px;display:flex;flex-direction:column;gap:10px" id="c-thread">
+      <div style="align-self:flex-end;max-width:72%"><div style="background:var(--red);color:#fff;padding:9px 12px;border-radius:12px 12px 2px 12px;font-size:12px">Oi, Gustavo! 😊 Só passando pra ver se você ainda está por aqui. Alguma coisa nova?</div><div style="font-size:9px;color:#9aa6b5;text-align:right">Luma · 18:57 ✓✓</div></div>
+      <div style="align-self:flex-start;max-width:60%"><div style="display:flex;gap:6px;align-items:flex-start"><div class="av" style="width:22px;height:22px;background:#cbd5e1;color:#475569">?</div><div style="background:#fff;border:1px solid var(--border);padding:9px 12px;border-radius:12px 12px 12px 2px;font-size:12px">Que msg?</div></div><div style="font-size:9px;color:#9aa6b5;margin-left:28px">Lead · 19:19</div></div>
+      <div style="align-self:flex-end;max-width:72%"><div style="background:var(--red);color:#fff;padding:9px 12px;border-radius:12px 12px 2px 12px;font-size:12px">Prontinho, Gustavo! Vou encaminhar agora para nossos consultores confirmarem a disponibilidade desse horário 😊</div><div style="font-size:9px;color:#9aa6b5;text-align:right">Luma · 19:19 ✓✓</div></div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);background:#fff;display:flex;align-items:center;gap:10px" id="c-composer">
+      <span style="font-size:16px">😊</span><span style="font-size:16px">📎</span><span style="font-size:16px">🖼️</span>
+      <div style="flex:1;background:#f1f3f6;border-radius:20px;padding:9px 14px;color:#9aa6b5;font-size:12px">Digite uma mensagem...</div>
+      <div class="av" style="background:var(--red)">🎤</div>
+    </div>`,'gustavo'));},
+
+  chatDetails(){return frame('chats', chatLayout(`
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fff" id="c-head">
+      ${avatar('GC','#e01b22')}<div><b>Gustavo Chaves</b> <span class="badge b-amber">Em Atendimento</span></div></div>
+    <div style="display:flex;gap:24px;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px;background:#fff">
+      <span style="color:var(--muted)">Conversa</span><b style="color:var(--red);border-bottom:2px solid var(--red);padding-bottom:6px">Detalhes</b>
+      <span style="color:var(--muted)">Anotações</span><span style="color:var(--muted)">Histórico</span></div>
+    <div style="flex:1;overflow:hidden;padding:16px 20px">
+      <div style="font-weight:700;margin-bottom:10px">🔴 Dados do Lead</div>
+      <div class="card" style="padding:11px 14px;margin-bottom:8px"><div style="font-size:9px;color:#9aa6b5">NOME</div><b>Gustavo Chaves</b></div>
+      <div class="card" style="padding:11px 14px;margin-bottom:8px;display:flex;justify-content:space-between"><div><div style="font-size:9px;color:#9aa6b5">TELEFONE</div><b>559991823241</b></div><span style="color:var(--green)">✓</span></div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:11px 14px;margin-bottom:14px"><div style="font-size:9px;color:#b45309">EMAIL</div><i style="color:#b45309;font-weight:700">Luma irá solicitar...</i></div>
+      <div style="font-weight:700;margin-bottom:10px">Status &amp; Qualificação</div>
+      <div class="card" style="padding:11px 14px;margin-bottom:10px"><div style="font-size:9px;color:#9aa6b5">STATUS DO LEAD</div><b>Em Atendimento ▾</b></div>
+      <div id="c-score"><div style="font-size:9px;color:#9aa6b5;margin-bottom:5px">LEAD SCORE</div>
+        <div class="scl"><i style="width:42%"></i></div><div style="text-align:right;font-weight:800;color:var(--red)">170</div></div>
+    </div>`,null));},
+
+  kanban(){
+    const cols=[
+      ['🆕 Novo Lead','0','#eef2ff',[]],
+      ['🔍 Em Triagem','1','#fff7ed',[['Gustavo Chaves','Pneus para Gol 2014','170','(99) 9182-3241','11d']]],
+      ['📄 Cotação Enviada','1','#fffbeb',[['Sandro Servo','Comprar pneus','140','(99) 9121-6206','11d']]],
+      ['🎯 Quer Agendar','1','#eff6ff',[['Marcelo Torres','Preço de pneu aro 15','90','(65) 8407-9979','14d']]],
+      ['🤝 Negociando','0','#fdf2f8',[]],
+      ['⏳ Aguardando Re…','0','#faf5ff',[]],
+      ['🙋 Aguardando At…','1','#fefce8',[['Suorte5','Troca de óleo Fiat Argo','','(99) 9223-2837','11d']]],
+      ['🧑 Em Atendiment…','1','#ecfeff',[['Auto Center Pneu Z.','Avaliação de painel','160','(99) 9196-8080','13d']]],
+    ];
+    const colHtml = cols.map((c,idx)=>`<div style="min-width:150px;flex:1;background:${c[2]};border-radius:12px;padding:9px" ${idx===6?'id="k-aguard"':''} ${idx===7?'id="k-atend"':''}>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:11px;margin-bottom:8px">${c[0]}<span class="badge b-gray">${c[1]}</span></div>
+      ${c[3].length? c[3].map(card=>`<div class="card" style="padding:9px;margin-bottom:6px"><div style="font-weight:700;font-size:11px">⬇ ${card[0]}</div>
+        <div style="font-size:10px;color:var(--muted);margin:3px 0">Busca: ${card[1]}</div>
+        <div style="display:flex;gap:5px;align-items:center;margin:5px 0"><span class="badge b-red">${card[2]||'–'}</span><span style="font-size:9px;color:#9aa6b5">❄ Muito frio</span></div>
+        <div style="font-size:9px;color:#9aa6b5">📞 ${card[3]} · ⏱ ${card[4]}</div></div>`).join('')
+      : '<div style="font-size:10px;color:#9aa6b5;text-align:center;padding:18px 0">Nenhum lead</div>'}
+    </div>`).join('');
+    return frame('kanban',`<div class="pad" style="height:100%;overflow:hidden">
+      <div class="h1">❤️ Funil de Vendas — Pneuzero</div>
+      <div class="sub">Acompanhe cada lead do primeiro contato até o serviço executado.</div>
+      <div style="display:flex;gap:7px;margin:12px 0" id="k-filters">
+        <span class="chip on">Todos</span><span class="chip">Geral</span><span class="chip">Pneus</span><span class="chip">Alinhamento</span><span class="chip">Suspensão</span><span class="chip">Freios</span><span class="chip">Óleo &amp; Filtros</span></div>
+      <div class="row" id="k-board" style="overflow-x:hidden">${colHtml}</div>
+    </div>`);},
+
+  agendados(){return frame('agendamentos',`<div class="pad">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="h1">📅 Agendamentos</div><div class="sub">Manutenções marcadas pela Luma ou pelo time</div></div>
+      <button class="btnRed">+ Novo agendamento</button></div>
+    <div style="display:flex;gap:24px;margin:14px 0 12px;font-size:13px" id="a-tabs">
+      <b style="color:var(--red);border-bottom:2px solid var(--red);padding-bottom:6px">📅 Agendados</b>
+      <span style="color:var(--muted)">🕑 Solicitações</span></div>
+    <div style="font-size:12px;font-weight:700;color:#475569;margin:10px 0">Terça-feira, 02 de Junho</div>
+    <div class="card" style="padding:13px;margin-bottom:8px;display:flex;align-items:center;gap:16px">
+      <div style="color:var(--red);font-weight:800;font-size:18px">14:30</div>
+      <div style="flex:1"><b>Sandro Servo</b> <span class="badge b-green">Confirmado</span> <span style="font-size:10px;color:#9aa6b5">📦 Luma</span><br>
+      <span style="font-size:12px">Alinhamento e balanceamento</span><br><span style="font-size:10px;color:#9aa6b5">Argo 2019 · ANO2019</span></div>
+      <button class="chip">Concluir</button><button class="chip">Cancelar</button></div>
+    <div style="font-size:12px;font-weight:700;color:#475569;margin:14px 0 10px">Terça-feira, 09 de Junho</div>
+    <div class="card" style="padding:13px;display:flex;align-items:center;gap:16px" id="a-card2">
+      <div style="color:var(--red);font-weight:800;font-size:18px">07:00</div>
+      <div style="flex:1"><b>Auto Center Pneu Zero</b> <span class="badge b-green">Confirmado</span> <span style="font-size:10px;color:#9aa6b5">📦 Luma</span><br>
+      <span style="font-size:12px">Avaliação do Painel</span><br><span style="font-size:10px;color:#9aa6b5">Fiat Uno 1997</span></div>
+      <button class="chip">Concluir</button><button class="chip">Cancelar</button></div>
+  </div>`);},
+
+  solicitacoes(){return frame('agendamentos',`<div class="pad">
+    <div class="h1">📅 Agendamentos</div><div class="sub">Manutenções marcadas pela Luma ou pelo time</div>
+    <div style="display:flex;gap:24px;margin:14px 0 12px;font-size:13px">
+      <span style="color:var(--muted)">📅 Agendados</span>
+      <b style="color:var(--red);border-bottom:2px solid var(--red);padding-bottom:6px">🕑 Solicitações</b></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><span class="chip on">Pendentes</span><span class="chip">Todas</span></div>
+    ${[['Gustavo Chaves','Avaliação da suspensão','559991823241','13/06, 08:00'],
+       ['Sandro Servo','Troca de óleo e revisão','559991216206','13/06, 10:00']].map((s,i)=>`
+      <div class="card" style="padding:13px;margin-bottom:8px;display:flex;align-items:center;gap:14px" ${i===0?'id="s-card"':''}>
+        <div style="color:var(--amber);font-size:18px">🕑</div>
+        <div style="flex:1"><b>${s[0]}</b> <span class="badge b-amber">Aguardando equipe</span><br>
+        <span style="font-size:12px">${s[1]}</span><br><span style="font-size:10px;color:#9aa6b5">💬 ${s[2]} · ${s[3]}</span></div>
+        <button class="chip" ${i===0?'id="s-aprovar"':''} style="border-color:#86efac;color:#166534">✓ Aprovar</button>
+        <button class="chip" style="border-color:#cbd5e1">⊘ Recusar</button></div>`).join('')}
+  </div>`);},
+
+  equipe(){return frame('equipe',`<div style="display:flex;height:100%">
+    <div style="width:34%;border-right:1px solid var(--border);background:#fff;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">Chat da Equipe</b>🔔</div>
+      <div style="font-size:11px;margin:10px 0 6px">🔔 Notificações de handoff: <b style="color:var(--green)">ativas</b></div>
+      <div style="display:flex;gap:6px;margin-bottom:14px"><button class="chip">Enviar teste</button><button class="chip">Desativar</button></div>
+      <div class="chip on" style="display:block;text-align:left;margin-bottom:10px" id="e-geral">💬 Geral</div>
+      <div style="font-size:9px;color:#9aa6b5;letter-spacing:1px;margin:8px 0">VENDEDORES</div>
+      ${[['Alberto','#0ea5e9'],['Gustavo Chaves','#e01b22'],['Wanderson Nasc.','#16a34a'],['teste','#7c3aed']].map(v=>`<div style="display:flex;gap:9px;align-items:center;padding:6px 0">${avatar(v[0][0],v[1])}<span style="font-size:12px">${v[0]}</span></div>`).join('')}
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fff"><b>Geral</b> <span style="font-size:11px;color:#9aa6b5">· Canal do time inteiro</span><span style="float:right;font-size:11px;color:var(--green)">● Conectado</span></div>
+      <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:10px" id="e-feed">
+        <div style="align-self:flex-start;max-width:70%;background:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font-size:12px" id="e-msg1">
+          <b>Luma</b><br>📌 <b>Solicitação de agendamento</b><br>ID: #cmqbhoap<br>👤 Gustavo Chaves &nbsp; 📞 559991823241<br>📐 Avaliação da suspensão &nbsp; 🗓️ 13/06, 08:00<br><br>Responda aqui no Geral: • aprovar • recusar • oferecer novo horário</div>
+        <div style="align-self:flex-start;max-width:62%;background:#ecfdf5;border:1px solid #86efac;border-radius:12px;padding:11px 13px;font-size:12px">
+          <b>Luma</b><br>✅ <b>Agendamento aprovado</b><br>👤 Gustavo Chaves<br>📐 Avaliação da suspensão · 🗓️ 13/06, 08:00</div>
+      </div>
+      <div style="padding:10px 16px;border-top:1px solid var(--border);background:#fff;display:flex;gap:10px;align-items:center"><span>😊</span><div style="flex:1;background:#f1f3f6;border-radius:20px;padding:9px 14px;color:#9aa6b5;font-size:12px">Mensagem para a equipe...</div><div class="av" style="background:var(--red)">➤</div></div>
+    </div></div>`);},
+
+  contatos(){return frame('contatos',`<div class="pad">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="h1">👥 Contatos</div><div class="sub">5 contatos | 5 selecionados</div></div>
+      <div style="display:flex;gap:8px"><button class="chip">+ Novo Contato</button><button class="btnRed" id="ct-disparo">📡 Disparo em Massa (5)</button></div></div>
+    <div style="display:flex;gap:10px;margin:14px 0 10px"><div style="flex:1;background:#fff;border:1px solid var(--border);border-radius:9px;padding:9px 13px;color:#9aa6b5;font-size:12px">🔍 Buscar por nome ou telefone...</div><span class="chip">Status ▾</span><span class="chip">Categoria ▾</span></div>
+    <div class="card" id="ct-list">
+      ${[['Gustavo Chaves','Em Atendimento','170','(99) 9182-3241','#e01b22','b-amber'],
+         ['Sandro Servo','Conscientizado','140','(99) 9121-6206','#f59e0b','b-red'],
+         ['Suorte5','Humano Solicitado','','(99) 9223-2837','#16a34a','b-amber'],
+         ['Auto Center Pneu Zero','Humano','160','(99) 9196-8080','#0891b2','b-red'],
+         ['Marcelo Torres','Qualificado','90','(65) 8407-9979','#e01b22','b-blue']].map(c=>`
+        <div style="display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid var(--border)">
+          <input type="checkbox" checked>${avatar(c[0][0],c[4])}
+          <div style="flex:1"><b style="font-size:12px">${c[0]}</b><br><span class="badge ${c[5]}">${c[1]}</span> ${c[2]?`<span style="font-size:10px;color:#9aa6b5">Score: ${c[2]}</span>`:''}</div>
+          <span style="font-size:11px;color:#9aa6b5;font-family:monospace">+55 ${c[3]}</span></div>`).join('')}
+    </div></div>`);},
+
+  automacoes(){const items=[
+      ['⏰','Follow-up de silêncio','Cliente parou de responder? A Luma cutuca de volta em 15 min, 45 min, 4 h e 24 h. 4 tentativas. Se some, marca como Perdido e avisa a equipe.'],
+      ['⭐','NPS pós-venda','Um dia depois da venda, pergunta a nota de 0 a 10. Nota baixa cai pra equipe correr atrás.'],
+      ['🔔','Lembrete de agendamento','Antes do horário marcado, lembra o cliente automaticamente. Menos gente furando horário.'],
+      ['🎂','Aniversário','No aniversário do cliente, mensagem automática de parabéns. Toque que fideliza.']];
+    return frame('dashboard',`<div class="pad" style="height:100%;display:flex;flex-direction:column;justify-content:center">
+      <div class="h1" style="font-size:22px">🤖 O que a Luma faz sozinha</div>
+      <div class="sub" style="margin-bottom:18px">Automações que rodam 24h, sem você fazer nada.</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        ${items.map((it,i)=>`<div class="card" style="padding:16px;display:flex;gap:13px" id="au-${i}">
+          <div style="font-size:26px">${it[0]}</div>
+          <div><b style="font-size:14px">${it[1]}</b><div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4">${it[2]}</div></div></div>`).join('')}
+      </div></div>`);},
+
+  relatorios(){return frame('relatorios',`<div class="pad">
+    <div class="h1">Relatórios</div><div class="sub">Visão geral dos atendimentos (últimos 30 dias)</div>
+    <div class="row" id="r-kpis" style="margin:14px 0">
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--red)">👥</div><div><div class="big">5</div><div class="lbl">Total de Leads</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--blue)">💬</div><div><div class="big">96</div><div class="lbl">Mensagens Recebidas</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--purple)">📨</div><div><div class="big">134</div><div class="lbl">Mensagens Enviadas</div></div></div>
+      <div class="kpi" style="flex:1"><div class="ic" style="background:var(--green)">🎧</div><div><div class="big">4/6</div><div class="lbl">Transferências</div></div></div>
+    </div>
+    <div class="card" style="padding:14px;margin-bottom:12px"><b>📈 Leads por Status</b>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap"><span class="badge b-amber">Em Atendimento 1</span><span class="badge b-blue">Qualificado 1</span><span class="badge b-red">CONSCIENTIZADO 1</span><span class="badge b-red">HUMANO_EM_ATENDIMENTO 1</span><span class="badge b-amber">Aguardando Humano 1</span></div></div>
+    <div class="card" style="padding:14px" id="r-users"><b>👥 Desempenho por Usuário</b>
+      <div class="row" style="margin-top:12px">
+        ${['Gustavo Chaves','Alberto'].map(u=>`<div style="flex:1;border:1px solid var(--border);border-radius:10px;padding:11px">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">${avatar(u[0],'#e01b22')}<b style="font-size:12px">${u}</b></div>
+          <div class="row" style="gap:6px;font-size:10px;text-align:center">
+            <div style="flex:1;background:#eff6ff;border-radius:7px;padding:7px"><b style="font-size:14px">0</b><br>Msgs</div>
+            <div style="flex:1;background:#fdf2f8;border-radius:7px;padding:7px"><b style="font-size:14px">—</b><br>T. resposta</div>
+            <div style="flex:1;background:#ecfdf5;border-radius:7px;padding:7px"><b style="font-size:14px">0</b><br>Qualif.</div>
+            <div style="flex:1;background:#eef2ff;border-radius:7px;padding:7px"><b style="font-size:14px">0</b><br>Fechados</div></div></div>`).join('')}
+      </div></div>
+  </div>`);}
+};
+
+function chatLayout(rightHtml, activeConv){
+  const convs=[
+    ['Gustavo Chaves','Conseguiu dar uma olhadinha n…','170','#0ea5e9','gustavo',''],
+    ['Sandro Servo','Conseguiu dar uma olhadinha n…','140','#f59e0b','sandro',''],
+    ['Marcelo Torres','Conseguiu dar uma olhadinha…','90','#e01b22','marcelo',''],
+    ['Suorte5','Perfeito, Suorte5! Estou transf…','','#16a34a','suorte','Em atendimento humano'],
+    ['Auto Center Pneu Zero','Olá, Auto Center Pneu Zero!…','160','#0891b2','auto','Atendido por Wanderson'],
+  ];
+  const list = convs.map(c=>`<div style="display:flex;gap:9px;padding:10px;border-radius:9px;${c[4]===activeConv?'background:#fef2f2;':''}align-items:center" >
+    ${avatar(c[0][0],c[3])}<div style="flex:1;min-width:0"><b style="font-size:12px">${c[0]}</b><br><span style="font-size:10px;color:var(--muted)">${c[1]}</span>${c[5]?`<br><span class="badge b-green" style="margin-top:3px;display:inline-block">${c[5]}</span>`:''}</div>
+    <span class="badge b-gray">${c[2]||'·'}</span></div>`).join('');
+  return `<div style="display:flex;height:100%">
+    <div style="width:31%;border-right:1px solid var(--border);background:#fff;display:flex;flex-direction:column" id="c-list">
+      <div style="padding:13px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">Conversas</b><span style="font-size:11px;color:#9aa6b5">5 conversas</span></div>
+        <div style="background:#f1f3f6;border-radius:9px;padding:8px 12px;color:#9aa6b5;font-size:12px;margin:10px 0">🔍 Buscar conversa...</div>
+        <div style="display:flex;gap:6px" id="c-tabs"><span class="chip on">Todas (5)</span><span class="chip" id="c-aguard">Aguardando</span><span class="chip">Minhas</span></div></div>
+      <div style="padding:0 9px;overflow:hidden">${list}</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;background:#f7f8fa">${rightHtml}</div></div>`;
+}
+
+const scenes = [
+  {nav:'dashboard',badge:'1 · Abertura',render:Screens.dashboard,steps:[
+    {say:'Fala, equipe! Nesse vídeo eu mostro como usar a Luma no dia a dia, nossa assistente de WhatsApp. Ela atende o cliente sozinha, qualifica, agenda, e quando precisa passa pra você.'},
+    {say:'Resumão: a Luma conversa com o cliente no WhatsApp usando inteligência artificial. Quando trava ou o cliente pede humano, cai pra gente aqui no painel. Seu trabalho é acompanhar, assumir quando precisa, e fechar venda.'},
+  ]},
+  {nav:'dashboard',badge:'2 · Dashboard',render:Screens.dashboard,steps:[
+    {say:'Essa é a tela inicial. No topo, os números do dia: total de leads, conversas e leads novos esperando atenção.',hl:'d-kpis'},
+    {say:'Na linha de baixo: faturamento do mês, NPS médio, follow-ups pendentes e veículos cadastrados. Bate o olho aqui de manhã pra saber o movimento.',hl:'d-kpis2'},
+    {say:'No gráfico, leads e mensagens por dia. E na lateral, o atendimento ativo: clica num cliente pra cair direto na conversa.',hl:'d-atend'},
+  ]},
+  {nav:'chats',badge:'3 · Chats',render:Screens.chatsList,steps:[
+    {say:'Essa é a tela onde você mais vai viver: os Chats. À esquerda, a lista de conversas; à direita, a conversa aberta.',hl:'c-list'},
+    {say:'Em cima tem as abas. Todas, Minhas, que são os chats que você assumiu, e Aguardando, os que precisam de alguém. Sempre olha Aguardando primeiro.',hl:'c-tabs'},
+  ]},
+  {nav:'chats',badge:'4 · Conversa',render:Screens.chatThread,steps:[
+    {say:'Abri uma conversa. Aqui você vê tudo que a Luma já falou com o cliente. Mensagem do cliente de um lado, resposta da Luma do outro. Áudio ela transcreve, e foto ela lê e entende.',hl:'c-thread'},
+    {say:'Pra responder é só digitar aqui embaixo. Tem emoji, áudio, foto e documento. Pra responder uma mensagem específica, clica nela e responde citando.',hl:'c-composer'},
+    {say:'E esse botão aqui é o mais importante: o Handoff, o Assumir. Quando você clica, a Luma para de responder e você assume a conversa.',hl:'c-assumir'},
+    {say:'Use quando o cliente pede pra falar com vendedor, ou quando a conversa tá pra fechar. Terminou? É só devolver pro bot que a Luma reassume os follow-ups. Não deixa cliente quente largado.',hl:'c-actions'},
+  ]},
+  {nav:'chats',badge:'5 · Ficha do Lead',render:Screens.chatDetails,steps:[
+    {say:'Na aba Detalhes abre a ficha do lead: nome, telefone, e-mail e cidade. Quando falta um dado, a própria Luma vai solicitar pro cliente.',hl:'c-head'},
+    {say:'E aqui embaixo, o Lead Score, o termômetro de quão quente tá o cliente. Quanto mais alto, mais pronto pra comprar. Foca energia nos quentes.',hl:'c-score'},
+  ]},
+  {nav:'kanban',badge:'6 · Funil (Kanban)',render:Screens.kanban,steps:[
+    {say:'Esse é o Kanban, o funil de vendas em forma de quadro. Cada coluna é um estágio: do Novo Lead, passando por Triagem, Cotação e Negociação, até Fechado ou Perdido.',hl:'k-board'},
+    {say:'Você arrasta o card de uma coluna pra outra conforme o cliente avança. Fechou venda, arrasta pra Fechado. Sumiu de vez, Perdido. Isso mantém o funil limpo.',hl:'k-aguard'},
+    {say:'Cada card mostra nome, telefone, o lead score e há quanto tempo está parado. Card parado muito tempo é cliente esfriando: vai lá e cutuca. Clicou no card, cai direto na conversa.',hl:'k-atend'},
+  ]},
+  {nav:'agendamentos',badge:'7 · Agendamentos',render:Screens.agendados,steps:[
+    {say:'Quando a Luma combina um horário, ela cria um agendamento. Na aba Agendados você vê tudo que já está marcado, por dia e por horário.',hl:'a-tabs'},
+    {say:'Em cada um você vê o cliente, o serviço e o veículo. Realizou? Clica em Concluir. Não rolou? Cancelar. Você também cria agendamento na mão pelo botão Novo agendamento.',hl:'a-card2'},
+  ]},
+  {nav:'agendamentos',badge:'8 · Solicitações',render:Screens.solicitacoes,steps:[
+    {say:'Atenção a esta aba: Solicitações. A Luma não confirma horário sozinha; ela cria um pedido que cai aqui pra gente aprovar.',hl:'s-card'},
+    {say:'Agenda livre? Clica em Aprovar e a Luma manda a confirmação automática pro cliente. Não dá? Recusar, e a Luma já volta propondo outro horário. Confere isso várias vezes ao dia.',hl:'s-aprovar'},
+  ]},
+  {nav:'equipe',badge:'9 · Equipe',render:Screens.equipe,steps:[
+    {say:'Essa é a Equipe, nosso chat interno, tipo um grupo só da turma. Aqui a gente se alinha sem misturar com o WhatsApp do cliente.',hl:'e-geral'},
+    {say:'E o melhor: a Luma posta avisos automáticos aqui. Pedido de agendamento esperando, nota baixa de NPS, lead novo atribuído. Tudo cai nesse canal. É o rádio da operação, fica de olho.',hl:'e-msg1'},
+  ]},
+  {nav:'contatos',badge:'10 · Contatos / Disparo',render:Screens.contatos,steps:[
+    {say:'Tela de Contatos. Lista todo mundo com nome, status, score e telefone. Daqui você dispara mensagem em massa: promoção, aviso, campanha.',hl:'ct-list'},
+    {say:'Selecionou os contatos, aparece o Disparo em Massa. Ele envia aos poucos, com intervalo entre cada um, de propósito, pra o WhatsApp não achar que é spam e bloquear o número.',hl:'ct-disparo'},
+    {say:'Cuidado de ouro: disparo mal feito queima o número. Manda só pra quem faz sentido, mensagem relevante, sem abusar da frequência. Na dúvida, alinha antes no chat da Equipe.',hl:'ct-disparo'},
+  ]},
+  {nav:'dashboard',badge:'11 · Automações',render:Screens.automacoes,steps:[
+    {say:'Tem muita coisa que a Luma faz sozinha. O follow-up de silêncio: cliente sumiu, ela cutuca em quinze minutos, quarenta e cinco, quatro horas e vinte e quatro horas. Quatro tentativas.',hl:'au-0'},
+    {say:'O NPS pós-venda: um dia depois da venda ela pergunta a nota. Nota baixa, cai pra equipe recuperar o cliente.',hl:'au-1'},
+    {say:'E ainda lembra o cliente antes do horário marcado, e manda parabéns no aniversário. A Luma trabalha 24 horas; você entra onde o humano faz diferença.',hl:'au-2'},
+  ]},
+  {nav:'relatorios',badge:'12 · Relatórios',render:Screens.relatorios,steps:[
+    {say:'Por último, Relatórios. Aqui você vê o desempenho: mensagens recebidas e enviadas, transferências e leads por status, nos últimos 30 dias.',hl:'r-kpis'},
+    {say:'E o desempenho por usuário: quem responde rápido e quem tá deixando cliente esperando. Tempo de resposta é dinheiro: cliente quente esfria em minutos.',hl:'r-users'},
+  ]},
+  {nav:'chats',badge:'13 · Rotina do dia',render:Screens.chatsList,steps:[
+    {say:'A rotina do dia em três passos. Um: de manhã, olha o Dashboard e o chat da Equipe pra ver o que tá pegando.',hl:'nav-dashboard'},
+    {say:'Dois: vai nos Chats, aba Aguardando, e assume quem precisa de humano.',hl:'c-aguard'},
+    {say:'Três: mantém o Kanban atualizado arrastando os cards, e aprova os agendamentos que a Luma mandou.',hl:'nav-kanban'},
+  ]},
+  {nav:'dashboard',badge:'14 · Fechamento',render:Screens.dashboard,steps:[
+    {say:'A Luma faz o trabalho pesado. Você faz o que máquina não faz: fechar e encantar o cliente.'},
+    {say:'Qualquer dúvida, tem a tela de Conhecimento no menu, com material de apoio. Bom trabalho, equipe!',hl:'nav-conhecimento'},
+  ]},
+];
+
+const app=document.getElementById('app'), cap=document.getElementById('captxt'),
+  badge=document.getElementById('scenebadge'), prog=document.querySelector('#prog>i'),
+  tlabel=document.getElementById('tlabel'), chapters=document.getElementById('chapters');
+let si=0, ti=0, playing=false, useVoice=true, muted=false, ptVoice=null, advTimer=null;
+
+function loadVoices(){
+  const vs=speechSynthesis.getVoices();
+  ptVoice = vs.find(v=>/pt[-_]BR/i.test(v.lang)) || vs.find(v=>/^pt/i.test(v.lang)) || null;
+}
+if('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+
+function buildChapters(){
+  chapters.innerHTML = scenes.map((s,i)=>`<div class="ch" data-i="${i}">${s.badge}</div>`).join('');
+  chapters.querySelectorAll('.ch').forEach(c=>c.onclick=()=>{stop();si=+c.dataset.i;ti=0;playing=true;document.getElementById('play').textContent='⏸';runStep(true);});
+}
+function markChapters(){chapters.querySelectorAll('.ch').forEach((c,i)=>{c.classList.toggle('cur',i===si);c.classList.toggle('done',i<si);});}
+
+function renderScene(){ app.innerHTML = scenes[si].render(); badge.textContent = scenes[si].badge; markChapters();
+  tlabel.textContent = `Cena ${si+1}/${scenes.length}`;
+  const cur=chapters.querySelector('.ch.cur'); if(cur && cur.scrollIntoView) cur.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}
+function clearHL(){app.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));}
+function applyHL(id){clearHL(); if(id){const el=document.getElementById(id); if(el)el.classList.add('hl');}}
+
+function speak(text, onend){
+  if(!('speechSynthesis' in window)){ return scheduleFallback(text,onend); }
+  speechSynthesis.cancel();
+  if(!useVoice || muted){ return scheduleFallback(text,onend); }
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='pt-BR'; if(ptVoice)u.voice=ptVoice; u.rate=1.02; u.pitch=1;
+  let done=false; const finish=()=>{if(done)return;done=true;onend&&onend();};
+  u.onend=finish; u.onerror=finish;
+  const ms=Math.max(3500, text.length*55); clearTimeout(advTimer); advTimer=setTimeout(finish,ms+1500);
+  speechSynthesis.speak(u);
+}
+function scheduleFallback(text,onend){ const ms=Math.max(3500, text.length*52);
+  clearTimeout(advTimer); advTimer=setTimeout(()=>onend&&onend(),ms); }
+
+function runStep(forceRender){
+  const sc=scenes[si]; if(forceRender) renderScene();
+  const step=sc.steps[ti];
+  cap.textContent=step.say;
+  applyHL(step.hl);
+  updateProgress();
+  if(playing){ speak(step.say, ()=>{ if(playing) nextStep(); }); }
+}
+function nextStep(){
+  const sc=scenes[si];
+  if(ti < sc.steps.length-1){ ti++; runStep(false); }
+  else if(si < scenes.length-1){ si++; ti=0; runStep(true); }
+  else { playing=false; document.getElementById('play').textContent='⟳'; cap.textContent='Fim do tutorial. Bom trabalho, equipe! 🏁'; }
+}
+function prevStep(){ stopSpeech();
+  if(ti>0){ti--;} else if(si>0){si--; ti=0;}
+  runStep(true);
+}
+function updateProgress(){
+  let total=0,done=0; scenes.forEach((s,i)=>{ total+=s.steps.length; if(i<si)done+=s.steps.length; if(i===si)done+=ti; });
+  prog.style.width=((done/(total-1))*100)+'%';
+}
+function stopSpeech(){ if('speechSynthesis' in window)speechSynthesis.cancel(); clearTimeout(advTimer); }
+function stop(){ playing=false; stopSpeech(); document.getElementById('play').textContent='▶'; }
+
+function startPlay(){ const s=document.getElementById('start'); if(s)s.remove(); }
+function play(){ startPlay(); playing=true; document.getElementById('play').textContent='⏸'; runStep(false); }
+function pause(){ playing=false; stopSpeech(); document.getElementById('play').textContent='▶'; }
+
+document.getElementById('play').onclick=()=>{ playing?pause():play(); };
+document.getElementById('next').onclick=()=>{ stopSpeech(); if(si<scenes.length-1){si++;ti=0;runStep(true);} };
+document.getElementById('prev').onclick=()=>{ stopSpeech(); if(si>0||ti>0){prevStep();} };
+document.getElementById('mute').onclick=function(){ muted=!muted; this.textContent=muted?'🔇':'🔊'; if(muted)stopSpeech(); };
+document.getElementById('bigplay').onclick=()=>{ useVoice=document.getElementById('voicechk').checked; startPlay(); play(); };
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault(); playing?pause():play();}
+  if(e.code==='ArrowRight'){document.getElementById('next').click();}
+  if(e.code==='ArrowLeft'){document.getElementById('prev').click();}
+});
+
+buildChapters(); renderScene(); cap.textContent='Clique em ▶ para iniciar o tutorial narrado.';
+</script>
+</body>
+</html>

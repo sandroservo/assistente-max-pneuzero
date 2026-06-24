@@ -26,6 +26,9 @@ import {
   MessagesSquare,
   Calendar,
   Headphones,
+  GraduationCap,
+  PlayCircle,
+  ChevronDown,
   Menu,
   X,
 } from "lucide-react";
@@ -42,13 +45,29 @@ const navItems = [
   { href: "/users", icon: Users, label: "Usuários" },
   { href: "/reports", icon: BarChart3, label: "Relatórios" },
   { href: "/settings", icon: Settings, label: "Configurações" },
-  { href: "/ajuda", icon: Headphones, label: "Ajuda" },
+];
+
+// Grupo "Treinamento" — submenu com Ajuda + Tutorial em vídeo
+const treinamentoItems = [
+  { href: "/ajuda", icon: Headphones, label: "Ajuda", external: false },
+  {
+    href: "/treinamento/tutorial-luma-pneuzero.html",
+    icon: PlayCircle,
+    label: "Tutorial em Vídeo",
+    external: true,
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
+
+  // Abre o grupo Treinamento quando estiver numa página dele
+  useEffect(() => {
+    if (pathname.startsWith("/ajuda")) setTrainingOpen(true);
+  }, [pathname]);
 
   // Ao entrar no Kanban, menu recolhido (desktop)
   useEffect(() => {
@@ -136,6 +155,79 @@ export function Sidebar() {
               </li>
             );
           })}
+
+          {/* Grupo Treinamento (Ajuda + Tutorial em vídeo) */}
+          {(() => {
+            const groupActive = treinamentoItems.some(
+              (t) => !t.external && pathname.startsWith(t.href)
+            );
+            const showChildren = (isMobile || !collapsed) && (trainingOpen || groupActive);
+            return (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (collapsed && !isMobile) {
+                      setCollapsed(false);
+                      setTrainingOpen(true);
+                    } else {
+                      setTrainingOpen((o) => !o);
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+                    collapsed && !isMobile && "justify-center px-2",
+                    groupActive
+                      ? "bg-[#CC0000] text-white"
+                      : "text-gray-600 hover:bg-gray-50"
+                  )}
+                  title={collapsed && !isMobile ? "Treinamento" : undefined}
+                >
+                  <GraduationCap className="h-5 w-5 shrink-0" />
+                  {(isMobile || !collapsed) && (
+                    <>
+                      <span className="flex-1 text-left">Treinamento</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-transform",
+                          showChildren && "rotate-180"
+                        )}
+                      />
+                    </>
+                  )}
+                </button>
+
+                {showChildren && (
+                  <ul className="mt-1 ml-4 space-y-1 border-l border-gray-100 pl-2">
+                    {treinamentoItems.map((t) => {
+                      const childActive = !t.external && pathname.startsWith(t.href);
+                      const childClass = cn(
+                        "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                        childActive
+                          ? "bg-[#CC0000] text-white"
+                          : "text-gray-600 hover:bg-gray-50"
+                      );
+                      return (
+                        <li key={t.href}>
+                          {t.external ? (
+                            <a href={t.href} target="_blank" rel="noopener noreferrer" className={childClass}>
+                              <t.icon className="h-4 w-4 shrink-0" />
+                              <span className="flex-1">{t.label}</span>
+                            </a>
+                          ) : (
+                            <Link href={t.href} className={childClass}>
+                              <t.icon className="h-4 w-4 shrink-0" />
+                              <span className="flex-1">{t.label}</span>
+                            </Link>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            );
+          })()}
         </ul>
       </nav>
 
