@@ -51,10 +51,10 @@ const navItems = [
 const treinamentoItems = [
   { href: "/ajuda", icon: Headphones, label: "Ajuda", external: false },
   {
-    href: "/treinamento/tutorial-luma-pneuzero.html",
+    href: "/treinamento",
     icon: PlayCircle,
     label: "Tutorial em Vídeo",
-    external: true,
+    external: false,
   },
 ];
 
@@ -66,7 +66,9 @@ export function Sidebar() {
 
   // Abre o grupo Treinamento quando estiver numa página dele
   useEffect(() => {
-    if (pathname.startsWith("/ajuda")) setTrainingOpen(true);
+    if (pathname.startsWith("/ajuda") || pathname.startsWith("/treinamento")) {
+      setTrainingOpen(true);
+    }
   }, [pathname]);
 
   // Ao entrar no Kanban, menu recolhido (desktop)
