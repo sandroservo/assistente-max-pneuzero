@@ -96,8 +96,17 @@
         <h2>🏁 Tutorial da Luma — Pneuzero</h2>
         <p>Como usar a assistente de WhatsApp no dia a dia: atender, assumir conversas, mover o funil e aprovar agendamentos. Narrado em português. ~14 min.</p>
         <button class="play" id="bigplay" title="Iniciar">▶</button>
-        <div class="opts">
+        <div class="opts" style="flex-wrap:wrap;justify-content:center">
           <label><input type="checkbox" id="voicechk" checked> Narração por voz</label>
+          <label style="display:flex;align-items:center;gap:6px">Voz
+            <select id="voicesel" style="background:#16202e;color:#e5e7eb;border:1px solid #243042;border-radius:6px;padding:4px 6px;font-size:12px;max-width:200px">
+              <option value="">Auto (pt-BR)</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px">Velocidade
+            <input type="range" id="ratesel" min="0.80" max="1.30" step="0.05" value="1.00" style="width:110px">
+            <span id="ratelbl" style="font-variant-numeric:tabular-nums;min-width:38px">1.00x</span>
+          </label>
           <span>•</span><span>Use ⏯ Espaço, ← →</span>
         </div>
       </div>
@@ -461,83 +470,249 @@ const scenes = [
 
 const app=document.getElementById('app'), cap=document.getElementById('captxt'),
   badge=document.getElementById('scenebadge'), prog=document.querySelector('#prog>i'),
-  tlabel=document.getElementById('tlabel'), chapters=document.getElementById('chapters');
-let si=0, ti=0, playing=false, useVoice=true, muted=false, ptVoice=null, advTimer=null;
+  tlabel=document.getElementById('tlabel'), chapters=document.getElementById('chapters'),
+  voiceSel=document.getElementById('voicesel'), rateSel=document.getElementById('ratesel'),
+  rateLbl=document.getElementById('ratelbl');
+let si=0, ti=0, playing=false, muted=false;
+let availableVoices=[], chosenVoice=null;
+let advTimer=null, gapTimer=null, currentUtter=null;
 
-function loadVoices(){
-  const vs=speechSynthesis.getVoices();
-  ptVoice = vs.find(v=>/pt[-_]BR/i.test(v.lang)) || vs.find(v=>/^pt/i.test(v.lang)) || null;
+// ===== TTS =====
+const SUPPORTED_TTS = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance!=='undefined';
+const GAP_SENTENCE_MS = 220;   // pausa entre frases dentro do step
+const GAP_STEP_MS     = 450;   // pausa entre steps da mesma cena
+const GAP_SCENE_MS    = 850;   // pausa ao trocar de cena
+// Estimativa fallback (caracter/ms) — usada quando TTS não disponível ou muted
+const FALLBACK_CHAR_MS = 55;
+
+function getUseVoice(){ const c=document.getElementById('voicechk'); return c?c.checked:true; }
+function getRate(){ return parseFloat(rateSel?.value||'1.0') || 1.0; }
+
+function refreshVoices(){
+  if(!SUPPORTED_TTS) return;
+  const vs = speechSynthesis.getVoices();
+  availableVoices = vs.filter(v=>/^pt/i.test(v.lang));
+  if(!availableVoices.length){ availableVoices = vs.slice(); }
+  if(voiceSel){
+    const prev = voiceSel.value;
+    voiceSel.innerHTML = '<option value="">Auto (melhor pt-BR)</option>' +
+      availableVoices.map(v=>`<option value="${v.voiceURI}">${v.name} (${v.lang})</option>`).join('');
+    if(prev) voiceSel.value = prev;
+  }
+  if(!chosenVoice){
+    chosenVoice = availableVoices.find(v=>/pt[-_]BR/i.test(v.lang))
+               || availableVoices.find(v=>/^pt/i.test(v.lang))
+               || availableVoices[0] || null;
+  }
 }
-if('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+if(SUPPORTED_TTS){
+  refreshVoices();
+  speechSynthesis.onvoiceschanged = refreshVoices;
+  // Algumas plataformas (Chrome) só listam vozes após primeira interação — retry algumas vezes
+  let retries=0;
+  const interval = setInterval(()=>{ refreshVoices(); if(availableVoices.length || ++retries>10) clearInterval(interval); }, 300);
+}
 
+// Aquece motor TTS (Chrome precisa de utterance "vazia" pós-interação pra liberar voz na primeira fala)
+function warmupTTS(){
+  if(!SUPPORTED_TTS) return;
+  try{
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0; u.rate = 1;
+    speechSynthesis.speak(u);
+  }catch{}
+}
+
+// Divide em frases curtas (mantém pontuação). Resultados vazios são descartados.
+function splitSentences(text){
+  const parts = text.split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(Boolean);
+  // Junta fragmentos < 12 chars no anterior (evita "Pneuzero." sozinho)
+  const out=[];
+  for(const p of parts){
+    if(out.length && p.length<12){ out[out.length-1] += ' ' + p; }
+    else out.push(p);
+  }
+  return out.length ? out : [text];
+}
+
+function clearTimers(){ clearTimeout(advTimer); clearTimeout(gapTimer); advTimer=null; gapTimer=null; }
+
+function stopSpeech(){
+  clearTimers();
+  if(SUPPORTED_TTS){ try{ speechSynthesis.cancel(); }catch{} }
+  currentUtter=null;
+}
+
+// Fala UMA sentença real via TTS. Retorna Promise<void>.
+function speakOne(sentence){
+  return new Promise(resolve=>{
+    if(!SUPPORTED_TTS || muted || !getUseVoice()){
+      const ms = Math.max(800, sentence.length * FALLBACK_CHAR_MS);
+      advTimer = setTimeout(resolve, ms);
+      return;
+    }
+    try{
+      const u = new SpeechSynthesisUtterance(sentence);
+      u.lang = 'pt-BR';
+      if(chosenVoice) u.voice = chosenVoice;
+      u.rate = getRate();
+      u.pitch = 1.0;
+      u.volume = 1.0;
+      let done=false;
+      const finish = () => { if(done) return; done=true; clearTimeout(advTimer); currentUtter=null; resolve(); };
+      u.onend = finish;
+      u.onerror = finish;
+      // Safety net: força fim se TTS não responder (chrome bug ocasional)
+      const estMs = Math.max(1200, (sentence.length / getRate()) * 65) + 2500;
+      advTimer = setTimeout(finish, estMs);
+      currentUtter = u;
+      speechSynthesis.speak(u);
+    }catch(e){
+      const ms = Math.max(800, sentence.length * FALLBACK_CHAR_MS);
+      advTimer = setTimeout(resolve, ms);
+    }
+  });
+}
+
+// Fala texto inteiro de um step (quebrado em sentenças).
+async function speakStep(text){
+  const sentences = splitSentences(text);
+  for(let i=0;i<sentences.length;i++){
+    if(!playing) return;
+    await speakOne(sentences[i]);
+    if(!playing) return;
+    if(i < sentences.length-1){
+      await new Promise(r => { gapTimer = setTimeout(r, GAP_SENTENCE_MS); });
+    }
+  }
+}
+
+// ===== Scenes / Steps =====
 function buildChapters(){
   chapters.innerHTML = scenes.map((s,i)=>`<div class="ch" data-i="${i}">${s.badge}</div>`).join('');
-  chapters.querySelectorAll('.ch').forEach(c=>c.onclick=()=>{stop();si=+c.dataset.i;ti=0;playing=true;document.getElementById('play').textContent='⏸';runStep(true);});
+  chapters.querySelectorAll('.ch').forEach(c=>c.onclick=()=>{
+    stopSpeech(); si=+c.dataset.i; ti=0; playing=true;
+    document.getElementById('play').textContent='⏸'; runStep(true);
+  });
 }
-function markChapters(){chapters.querySelectorAll('.ch').forEach((c,i)=>{c.classList.toggle('cur',i===si);c.classList.toggle('done',i<si);});}
-
-function renderScene(){ app.innerHTML = scenes[si].render(); badge.textContent = scenes[si].badge; markChapters();
+function markChapters(){
+  chapters.querySelectorAll('.ch').forEach((c,i)=>{
+    c.classList.toggle('cur', i===si);
+    c.classList.toggle('done', i<si);
+  });
+}
+function renderScene(){
+  app.innerHTML = scenes[si].render();
+  badge.textContent = scenes[si].badge;
+  markChapters();
   tlabel.textContent = `Cena ${si+1}/${scenes.length}`;
-  const cur=chapters.querySelector('.ch.cur'); if(cur && cur.scrollIntoView) cur.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+  const cur = chapters.querySelector('.ch.cur');
+  if(cur && cur.scrollIntoView) cur.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
 }
-function clearHL(){app.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));}
-function applyHL(id){clearHL(); if(id){const el=document.getElementById(id); if(el)el.classList.add('hl');}}
+function clearHL(){ app.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl')); }
+function applyHL(id){ clearHL(); if(id){ const el=document.getElementById(id); if(el) el.classList.add('hl'); } }
 
-function speak(text, onend){
-  if(!('speechSynthesis' in window)){ return scheduleFallback(text,onend); }
-  speechSynthesis.cancel();
-  if(!useVoice || muted){ return scheduleFallback(text,onend); }
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang='pt-BR'; if(ptVoice)u.voice=ptVoice; u.rate=1.02; u.pitch=1;
-  let done=false; const finish=()=>{if(done)return;done=true;onend&&onend();};
-  u.onend=finish; u.onerror=finish;
-  const ms=Math.max(3500, text.length*55); clearTimeout(advTimer); advTimer=setTimeout(finish,ms+1500);
-  speechSynthesis.speak(u);
-}
-function scheduleFallback(text,onend){ const ms=Math.max(3500, text.length*52);
-  clearTimeout(advTimer); advTimer=setTimeout(()=>onend&&onend(),ms); }
-
-function runStep(forceRender){
-  const sc=scenes[si]; if(forceRender) renderScene();
-  const step=sc.steps[ti];
-  cap.textContent=step.say;
+async function runStep(forceRender){
+  const sc = scenes[si];
+  const step = sc.steps[ti];
+  const sceneChanged = forceRender;
+  if(forceRender){
+    renderScene();
+    // Pausa breve pro DOM assentar antes do TTS começar
+    await new Promise(r=>setTimeout(r, sceneChanged ? 120 : 60));
+  }
+  cap.textContent = step.say;
   applyHL(step.hl);
   updateProgress();
-  if(playing){ speak(step.say, ()=>{ if(playing) nextStep(); }); }
+  if(!playing) return;
+  await speakStep(step.say);
+  if(!playing) return;
+  // Pausa pós-step antes do próximo
+  const gap = (ti === sc.steps.length-1) ? GAP_SCENE_MS : GAP_STEP_MS;
+  await new Promise(r => { gapTimer = setTimeout(r, gap); });
+  if(!playing) return;
+  nextStep();
 }
+
 function nextStep(){
-  const sc=scenes[si];
+  const sc = scenes[si];
   if(ti < sc.steps.length-1){ ti++; runStep(false); }
   else if(si < scenes.length-1){ si++; ti=0; runStep(true); }
-  else { playing=false; document.getElementById('play').textContent='⟳'; cap.textContent='Fim do tutorial. Bom trabalho, equipe! 🏁'; }
+  else {
+    playing=false;
+    document.getElementById('play').textContent='⟳';
+    cap.textContent='Fim do tutorial. Bom trabalho, equipe! 🏁';
+  }
 }
-function prevStep(){ stopSpeech();
-  if(ti>0){ti--;} else if(si>0){si--; ti=0;}
+function prevStep(){
+  stopSpeech();
+  if(ti>0){ ti--; } else if(si>0){ si--; ti=0; }
   runStep(true);
 }
 function updateProgress(){
-  let total=0,done=0; scenes.forEach((s,i)=>{ total+=s.steps.length; if(i<si)done+=s.steps.length; if(i===si)done+=ti; });
-  prog.style.width=((done/(total-1))*100)+'%';
+  let total=0, done=0;
+  scenes.forEach((s,i)=>{ total += s.steps.length; if(i<si) done += s.steps.length; if(i===si) done += ti; });
+  prog.style.width = ((done/Math.max(1,total-1)) * 100) + '%';
 }
-function stopSpeech(){ if('speechSynthesis' in window)speechSynthesis.cancel(); clearTimeout(advTimer); }
-function stop(){ playing=false; stopSpeech(); document.getElementById('play').textContent='▶'; }
-
-function startPlay(){ const s=document.getElementById('start'); if(s)s.remove(); }
+function stop(){
+  playing=false; stopSpeech();
+  document.getElementById('play').textContent='▶';
+}
+function startPlay(){ const s=document.getElementById('start'); if(s) s.remove(); warmupTTS(); }
 function play(){ startPlay(); playing=true; document.getElementById('play').textContent='⏸'; runStep(false); }
 function pause(){ playing=false; stopSpeech(); document.getElementById('play').textContent='▶'; }
 
-document.getElementById('play').onclick=()=>{ playing?pause():play(); };
-document.getElementById('next').onclick=()=>{ stopSpeech(); if(si<scenes.length-1){si++;ti=0;runStep(true);} };
-document.getElementById('prev').onclick=()=>{ stopSpeech(); if(si>0||ti>0){prevStep();} };
-document.getElementById('mute').onclick=function(){ muted=!muted; this.textContent=muted?'🔇':'🔊'; if(muted)stopSpeech(); };
-document.getElementById('bigplay').onclick=()=>{ useVoice=document.getElementById('voicechk').checked; startPlay(); play(); };
-document.addEventListener('keydown',e=>{
-  if(e.code==='Space'){e.preventDefault(); playing?pause():play();}
-  if(e.code==='ArrowRight'){document.getElementById('next').click();}
-  if(e.code==='ArrowLeft'){document.getElementById('prev').click();}
+// ===== Bindings =====
+document.getElementById('play').onclick = () => { playing ? pause() : play(); };
+document.getElementById('next').onclick = () => {
+  stopSpeech(); if(si<scenes.length-1){ si++; ti=0; runStep(true); }
+};
+document.getElementById('prev').onclick = () => {
+  stopSpeech(); if(si>0||ti>0){ prevStep(); }
+};
+document.getElementById('mute').onclick = function(){
+  muted = !muted;
+  this.textContent = muted ? '🔇' : '🔊';
+  if(muted) stopSpeech();
+};
+document.getElementById('bigplay').onclick = () => { refreshVoices(); startPlay(); play(); };
+
+if(voiceSel){
+  voiceSel.addEventListener('change', () => {
+    const uri = voiceSel.value;
+    chosenVoice = uri ? availableVoices.find(v=>v.voiceURI===uri) || null
+                      : (availableVoices.find(v=>/pt[-_]BR/i.test(v.lang)) || availableVoices[0] || null);
+    if(SUPPORTED_TTS && playing){
+      // Re-fala step atual com nova voz
+      stopSpeech();
+      runStep(false);
+    }
+  });
+}
+if(rateSel && rateLbl){
+  const updRate = () => { rateLbl.textContent = parseFloat(rateSel.value).toFixed(2) + 'x'; };
+  rateSel.addEventListener('input', updRate);
+  updRate();
+}
+
+document.addEventListener('keydown', e => {
+  if(e.code==='Space'){ e.preventDefault(); playing?pause():play(); }
+  if(e.code==='ArrowRight'){ document.getElementById('next').click(); }
+  if(e.code==='ArrowLeft'){ document.getElementById('prev').click(); }
 });
 
-buildChapters(); renderScene(); cap.textContent='Clique em ▶ para iniciar o tutorial narrado.';
+// Hack chrome: speechSynthesis pausa sozinho após 14-15s em conversas longas. Re-resume periódico mantém vivo.
+if(SUPPORTED_TTS){
+  setInterval(()=>{
+    if(playing && speechSynthesis.speaking && !speechSynthesis.paused){
+      try{ speechSynthesis.pause(); speechSynthesis.resume(); }catch{}
+    }
+  }, 10000);
+}
+
+buildChapters();
+renderScene();
+cap.textContent = 'Clique em ▶ para iniciar o tutorial narrado.';
 </script>
 </body>
 </html>
