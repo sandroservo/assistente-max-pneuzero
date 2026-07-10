@@ -11,7 +11,7 @@ import OpenAI from "openai";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { upsertVehicle } from "./vehicle";
-import { buscarProdutosPorDescricao } from "./pneuzero-stock";
+import { buscarProdutosPorDescricao, buscarPneusPorMedida } from "./pneuzero-stock";
 import {
   parseDateTimePtBr,
   cancelAppointment,
@@ -57,7 +57,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "buscar_pneu",
       description:
-        "Busca pneus disponíveis no catálogo Pneuzero por medida (obrigatória) e marca (opcional). Use SEMPRE antes de citar preço de pneu.",
+        "Busca pneus disponíveis no ERP ao vivo da Pneuzero por medida (obrigatória) e marca (opcional). Retorna descrição exata e estoque. Use SEMPRE antes de confirmar disponibilidade de pneu. NÃO retorna preço — para valores, ofereça transferir_humano.",
       parameters: {
         type: "object",
         properties: {
@@ -94,7 +94,7 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "buscar_estoque",
       description:
-        "Consulta estoque ao vivo no ERP da Pneuzero (tabela produto). USE SEMPRE quando o lead perguntar se TEM, se ESTÁ DISPONÍVEL, ou pedir QUALQUER item específico — pneus, filtros (ar, óleo, combustível, cabine), óleos, lonas, pastilhas, baterias, lâmpadas, protetores, câmaras, válvulas, kits, peças. NÃO se limite a pneus. Faz LIKE em proDescricao do ERP, retorna descrição exata e quantidade. Estoque > 0 = disponível; <= 0 = indisponível (oferecer transferir_humano para confirmar reposição).",
+        "Consulta estoque ao vivo no ERP da Pneuzero (tabela produto). USE SEMPRE quando o lead perguntar se TEM, se ESTÁ DISPONÍVEL, ou pedir QUALQUER item específico — pneus, filtros (ar, óleo, combustível, cabine), óleos, lonas, pastilhas, baterias, lâmpadas, protetores, câmaras, válvulas, kits, peças. Busca por palavras na descrição/código (ex: 'filtro ar' encontra 'FILTRO DE AR'). Estoque > 0 = disponível; <= 0 = indisponível (oferecer transferir_humano para confirmar reposição).",
       parameters: {
         type: "object",
         properties: {
@@ -166,6 +166,26 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "atualizar_status",
+      description:
+        "Atualiza o estágio do lead no funil quando houver sinal CLARO na conversa. QUALIFICADO=intenção concreta de agendar; EM_NEGOCIACAO=discutindo pagamento/desconto; FECHADO=confirmou compra/agendamento; PERDIDO=desistiu explicitamente; LEAD_FRIO=adiando sem compromisso. Em dúvida, NÃO chame.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: {
+            type: "string",
+            enum: ["QUALIFICADO", "EM_NEGOCIACAO", "FECHADO", "PERDIDO", "LEAD_FRIO"],
+          },
+          motivo: { type: "string", description: "Trecho/sinal da conversa que justifica (1 frase)" },
+        },
+        required: ["status", "motivo"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "transferir_humano",
       description:
         "Cria handoff para um vendedor humano. Use quando: lead pede explicitamente um atendente, cotação está pronta para negociação humana, há dúvida técnica complexa, ou falta informação crítica. NÃO use para agendamento com serviço+data+hora claros; nesse caso use agendar_servico.",
@@ -211,6 +231,11 @@ interface AgendarServicoArgs {
 }
 
 interface CancelarAgendamentoArgs {
+  motivo: string;
+}
+
+interface AtualizarStatusArgs {
+  status: string;
   motivo: string;
 }
 
@@ -261,6 +286,9 @@ export async function executeTool(
       case "transferir_humano":
         result = await execTransferirHumano(args as TransferirHumanoArgs, ctx);
         break;
+      case "atualizar_status":
+        result = await execAtualizarStatus(args as AtualizarStatusArgs, ctx);
+        break;
       default:
         result = JSON.stringify({ error: `Tool desconhecida: ${name}` });
     }
@@ -270,6 +298,33 @@ export async function executeTool(
     console.error(`[tool] error name=${name}:`, err);
     return JSON.stringify({ error: "Falha interna ao executar tool" });
   }
+}
+
+const STATUS_VALIDOS = new Set(["QUALIFICADO", "EM_NEGOCIACAO", "FECHADO", "PERDIDO", "LEAD_FRIO"]);
+// Status controlados por humano/handoff — IA não sobrescreve
+const STATUS_PROTEGIDOS = new Set(["HUMANO_SOLICITADO", "HUMANO_EM_ATENDIMENTO", "FECHADO"]);
+
+async function execAtualizarStatus(
+  args: AtualizarStatusArgs,
+  ctx: ToolContext
+): Promise<string> {
+  if (!STATUS_VALIDOS.has(args.status)) {
+    return JSON.stringify({ error: `Status inválido: ${args.status}` });
+  }
+  const lead = await prisma.lead.findUnique({
+    where: { id: ctx.leadId },
+    select: { status: true },
+  });
+  if (!lead) return JSON.stringify({ error: "Lead não encontrado" });
+  if (STATUS_PROTEGIDOS.has(lead.status) && args.status !== "FECHADO") {
+    return JSON.stringify({ ok: false, mantido: lead.status, motivo: "status protegido, não alterado" });
+  }
+  await prisma.lead.update({
+    where: { id: ctx.leadId },
+    data: { status: args.status as Prisma.LeadUpdateInput["status"] },
+  });
+  console.log(`[tool] atualizar_status lead=${ctx.leadId} ${lead.status} → ${args.status} (${args.motivo})`);
+  return JSON.stringify({ ok: true, statusAnterior: lead.status, statusNovo: args.status });
 }
 
 async function execRegistrarVeiculo(
@@ -292,6 +347,28 @@ async function execRegistrarVeiculo(
 }
 
 async function execBuscarPneu(args: BuscarPneuArgs): Promise<string> {
+  const erp = await buscarPneusPorMedida(args.medida, {
+    marca: args.marca,
+    apenasDisponivel: true,
+    limit: 15,
+  });
+
+  if (erp.ok && erp.produtos.length > 0) {
+    return JSON.stringify({
+      medida: args.medida,
+      fonte: "erp",
+      total: erp.total,
+      pneus: erp.produtos.map((p) => ({
+        id: p.id,
+        codigo: p.codigo,
+        descricao: p.proDescricao,
+        estoque: p.zzz_proEstoqueAtual,
+        disponivel: p.zzz_proEstoqueAtual > 0,
+      })),
+    });
+  }
+
+  // Fallback: catálogo local (pode estar desatualizado)
   const tires = await prisma.tireProduct.findMany({
     where: {
       ativo: true,
@@ -301,21 +378,34 @@ async function execBuscarPneu(args: BuscarPneuArgs): Promise<string> {
     take: 10,
     orderBy: { preco: "asc" },
   });
+
+  if (tires.length > 0) {
+    return JSON.stringify({
+      medida: args.medida,
+      fonte: "catalogo_local",
+      total: tires.length,
+      pneus: tires.map((t) => ({
+        id: t.id,
+        marca: t.marca,
+        modelo: t.modelo,
+        medida: t.medida,
+        estoque: t.estoque,
+        disponivel: (t.estoque ?? 0) > 0,
+      })),
+      aviso: "Dados do catálogo local — confirme disponibilidade com a equipe se necessário.",
+    });
+  }
+
+  const avisoErp = !erp.ok
+    ? `ERP indisponível (${erp.error}). `
+    : "";
+
   return JSON.stringify({
     medida: args.medida,
-    total: tires.length,
-    pneus: tires.map((t) => ({
-      id: t.id,
-      marca: t.marca,
-      modelo: t.modelo,
-      medida: t.medida,
-      preco: t.preco?.toString() ?? null,
-      estoque: t.estoque,
-    })),
-    aviso:
-      tires.length === 0
-        ? "Sem pneus cadastrados para essa medida. Ofereça transferir para humano confirmar disponibilidade."
-        : undefined,
+    fonte: "nenhum",
+    total: 0,
+    pneus: [],
+    aviso: `${avisoErp}Sem pneus para essa medida. Ofereça transferir para humano confirmar disponibilidade.`,
   });
 }
 

@@ -79,7 +79,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       "",
     openaiModel:
       map.get(SETTINGS_KEYS.OPENAI_MODEL) ||
-      "gpt-4o-mini",
+      "gpt-4o",
     systemPrompt:
       map.get(SETTINGS_KEYS.SYSTEM_PROMPT) ||
       "",

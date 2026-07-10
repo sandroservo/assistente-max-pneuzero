@@ -30,15 +30,8 @@ export const MEMORY_TYPES = {
 
 // Chaves de memória comuns
 export const MEMORY_KEYS = {
-  PLANO_INTERESSE: "plano_interesse",
-  PLANO_RECOMENDADO: "plano_recomendado",
   OBJECAO_PRECO: "objecao_preco",
-  OBJECAO_CARENCIA: "objecao_carencia",
   PREFERENCIA_PAGAMENTO: "preferencia_pagamento",
-  TEM_DEPENDENTES: "tem_dependentes",
-  QTD_DEPENDENTES: "qtd_dependentes",
-  TEM_IDOSO_60: "tem_idoso_60",
-  FOCO_ATENDIMENTO: "foco_atendimento",
   ULTIMO_RESUMO: "ultimo_resumo",
   PROXIMO_PASSO: "proximo_passo",
   NOME_INFORMADO: "nome_informado",
@@ -307,32 +300,6 @@ export async function extractAndSaveMemories(
     extractedName = name;
   }
 
-  // Detecta interesse em serviços (Pneuzero)
-  if (
-    lowerMessage.includes("plano") ||
-    lowerMessage.includes("rotina") ||
-    lowerMessage.includes("especializado") ||
-    lowerMessage.includes("cobertura total")
-  ) {
-    if (lowerMessage.includes("rotina") || lowerMessage.includes("básico") || lowerMessage.includes("basico")) {
-      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Plano Rotina - R$ 37,90/mês");
-    } else if (lowerMessage.includes("especializado")) {
-      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Plano Especializado - R$ 57,90/mês");
-    } else if (lowerMessage.includes("cobertura total") || lowerMessage.includes("completo")) {
-      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Plano Cobertura Total - R$ 97,00/mês");
-    }
-  }
-
-  // Detecta dependentes
-  if (lowerMessage.includes("dependente") || lowerMessage.includes("família") || lowerMessage.includes("filhos")) {
-    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.TEM_DEPENDENTES, "sim");
-  }
-
-  // Detecta idoso 60+
-  if (lowerMessage.includes("60") || lowerMessage.includes("idoso") || lowerMessage.includes("terceira idade")) {
-    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.TEM_IDOSO_60, "sim");
-  }
-
   // Detecta objeção de preço
   if (lowerMessage.includes("caro") || lowerMessage.includes("preço") || lowerMessage.includes("desconto")) {
     await saveMemory(leadId, MEMORY_TYPES.OBJECTION, MEMORY_KEYS.OBJECAO_PRECO, "Lead mencionou preço/desconto");
@@ -343,13 +310,6 @@ export async function extractAndSaveMemories(
     await saveMemory(leadId, MEMORY_TYPES.PREFERENCE, MEMORY_KEYS.PREFERENCIA_PAGAMENTO, "Pix");
   } else if (lowerMessage.includes("cartão") || lowerMessage.includes("credito")) {
     await saveMemory(leadId, MEMORY_TYPES.PREFERENCE, MEMORY_KEYS.PREFERENCIA_PAGAMENTO, "Cartão de crédito");
-  }
-
-  // Detecta foco de atendimento
-  if (lowerMessage.includes("rotina") || lowerMessage.includes("prevenção")) {
-    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.FOCO_ATENDIMENTO, "Rotina e prevenção");
-  } else if (lowerMessage.includes("exame") || lowerMessage.includes("check-up")) {
-    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.FOCO_ATENDIMENTO, "Exames e check-ups");
   }
 
   return { extractedName };

@@ -415,7 +415,7 @@ export async function POST(req: Request) {
     const lastOutFromHuman = !!lastOut?.sentByUserId;
 
     // Gera resposta humanizada com IA (Luma - Pneuzero)
-    const { response: botResponse, extractedData, cotacaoEnviada } = await generateAIResponse(text ?? "", {
+    const { response: botResponse, extractedData, cotacaoEnviada, statusAtualizadoPorIA } = await generateAIResponse(text ?? "", {
       leadId: lead.id,
       organizationId: lead.organizationId,
       conversationId: conversation.id,
@@ -478,17 +478,20 @@ export async function POST(req: Request) {
       const scoreBreakdown = await updateLeadScore(lead.id, messageHistory, text ?? "");
       console.log(`Lead ${lead.id} score: ${scoreBreakdown.total}/1000 (P:${scoreBreakdown.perfil} N:${scoreBreakdown.necessidade} C:${scoreBreakdown.consciencia} B:${scoreBreakdown.comportamento} D:${scoreBreakdown.decisao})`);
 
-      // Detecta status por keywords + sinais de tools (cotação enviada)
-      const detectedStatus = detectLeadStatus(
-        messageHistory,
-        text ?? "",
-        lead.status,
-        { cotacaoEnviada: cotacaoEnviada ?? false }
-      );
+      // IA já atualizou status via tool atualizar_status? Então não sobrescreve
+      // com keywords/score nesta rodada (lead.status local está desatualizado).
+      const detectedStatus = statusAtualizadoPorIA
+        ? null
+        : detectLeadStatus(
+            messageHistory,
+            text ?? "",
+            lead.status,
+            { cotacaoEnviada: cotacaoEnviada ?? false }
+          );
 
       // Se keywords detectaram mudança, usa keyword; senão usa score para sugerir
       let newStatus: string | null = detectedStatus;
-      if (!newStatus) {
+      if (!newStatus && !statusAtualizadoPorIA) {
         const scoreStatus = getStatusFromScore(scoreBreakdown.total);
         // Só avança pelo score (não regride), e não sobrescreve status manuais/especiais
         const protectedStatuses = ["FECHADO", "PERDIDO", "HUMANO_SOLICITADO", "HUMANO_EM_ATENDIMENTO", "AGUARDANDO_RESPOSTA", "LEAD_FRIO"];

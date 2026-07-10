@@ -6,6 +6,8 @@
  */
 
 import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
 import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
 import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
@@ -169,6 +171,21 @@ HANDOFF — Transfira para humano quando:
 
 export { DEFAULT_SYSTEM_PROMPT };
 
+// Fonte única do prompt padrão: agent/systemprompt.md (mesmo arquivo exibido
+// em /settings). Constante acima é só fallback se o arquivo não existir no deploy.
+let filePromptCache: string | null | undefined;
+function getDefaultSystemPrompt(): string {
+  if (filePromptCache === undefined) {
+    try {
+      const raw = fs.readFileSync(path.join(process.cwd(), "agent", "systemprompt.md"), "utf-8").trim();
+      filePromptCache = raw.length > 0 ? raw : null;
+    } catch {
+      filePromptCache = null;
+    }
+  }
+  return filePromptCache ?? DEFAULT_SYSTEM_PROMPT;
+}
+
 export async function generateAIResponse(
   userMessage: string,
   context: ConversationContext
@@ -177,6 +194,7 @@ export async function generateAIResponse(
   extractedData?: { name?: string; email?: string };
   cotacaoEnviada?: boolean;
   handoffSolicitado?: boolean;
+  statusAtualizadoPorIA?: boolean;
 }> {
   try {
     const settings = await getSystemSettings();
@@ -187,8 +205,8 @@ export async function generateAIResponse(
       return { response: generateFallbackResponse(userMessage, context.leadName) };
     }
 
-    // Usa prompt do banco (/settings) ou o padrão
-    const systemPrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+    // Usa prompt do banco (/settings) ou o padrão (agent/systemprompt.md)
+    const systemPrompt = settings.systemPrompt || getDefaultSystemPrompt();
 
     // Base de conhecimento única (single-tenant): busca toda a base, sem filtro de organização.
     // A mensagem do lead já foi salva no banco antes de chegar aqui,
@@ -258,106 +276,66 @@ export async function generateAIResponse(
     }).format(new Date());
     const isoNow = new Date().toISOString();
 
-    const messages: Message[] = [
-      { role: "system", content: systemPrompt },
-      {
-        role: "system",
-        content:
-          `DATA E HORA ATUAL (use SEMPRE como referência — NÃO use 2023, 2024, 2025): ${nowBrt} (ISO ${isoNow}, fuso America/Sao_Paulo).\n` +
-          `Quando o cliente disser "amanhã", "sábado", "semana que vem", calcule a partir DESTA data. Ao chamar agendar_servico, passe data no formato ISO completo com o ano correto (atual ou próximo se a data já passou no ano atual).`,
-      },
-    ];
+    // Contexto dinâmico consolidado em UM bloco system (em vez de ~12 blocos
+    // soltos): menos tokens, instruções não competem entre si.
+    const contextParts: string[] = [];
 
-    // Adiciona Tool Information (base de conhecimento) — Luma DEVE consultar para serviços, pneus, preços, garantias, endereços.
+    contextParts.push(
+      `DATA E HORA ATUAL (use SEMPRE como referência — NÃO use 2023, 2024, 2025): ${nowBrt} (ISO ${isoNow}, fuso America/Sao_Paulo).\n` +
+      `Quando o cliente disser "amanhã", "sábado", "semana que vem", calcule a partir DESTA data. Ao chamar agendar_servico, passe data no formato ISO completo com o ano correto (atual ou próximo se a data já passou no ano atual).`
+    );
+
+    // Tool Information (base de conhecimento) — Luma DEVE consultar para serviços, pneus, preços, garantias, endereços.
     if (toolInformation) {
-      messages.push({
-        role: "system",
-        content: `${toolInformation}\n\nIMPORTANTE: Use o bloco <Tool Information> acima para responder sobre pneus, serviços, preços, garantias, endereços e regras da Pneuzero. Consulte sempre essa base antes de responder.`,
-      });
+      contextParts.push(`${toolInformation}\n\nIMPORTANTE: Use o bloco <Tool Information> acima para responder sobre pneus, serviços, preços, garantias, endereços e regras da Pneuzero. Consulte sempre essa base antes de responder.`);
     }
 
     // Sumário rolante: dá contexto longo em texto compacto. Custa pouco token,
     // permite Luma "lembrar" de conversa anterior sem dumpar todo histórico.
     if (conversationSummary) {
-      messages.push({
-        role: "system",
-        content: `<ConversationSummary>\n${conversationSummary}\n</ConversationSummary>\n\nUse este sumário pra retomar contexto. Não repita o que já foi tratado.`,
-      });
+      contextParts.push(`<ConversationSummary>\n${conversationSummary}\n</ConversationSummary>\n\nUse este sumário pra retomar contexto. Não repita o que já foi tratado.`);
     }
 
-    // Adiciona memórias do lead (top-12 rankeadas por FTS)
+    // Memórias do lead (top-12 rankeadas por FTS)
     if (memoryContext) {
-      messages.push({
-        role: "system",
-        content: memoryContext,
-      });
+      contextParts.push(memoryContext);
     }
 
     // Contexto de horário (Brasil): Luma sabe se é dia, tarde, noite ou madrugada
     const { periodo, saudacao, horaFormatada } = getPeriodoDoDia();
-    messages.push({
-      role: "system",
-      content: `Agora são ${horaFormatada} (horário de Brasília). Período: ${periodo}. Use a saudação adequada quando for começar ou cumprimentar: ${saudacao}. Seja natural com o horário (ex.: de madrugada pode ser mais breve; de manhã/tarde/noite use o cumprimento correto).`,
-    });
+    contextParts.push(`Agora são ${horaFormatada} (horário de Brasília). Período: ${periodo}. Use a saudação adequada quando for começar ou cumprimentar: ${saudacao}. Seja natural com o horário (ex.: de madrugada pode ser mais breve; de manhã/tarde/noite use o cumprimento correto).`);
 
-    // Adiciona contexto do lead (usa isFirstMessage já definida acima)
+    // Contexto do lead (usa isFirstMessage já definida acima)
     if (isFirstMessage && context.leadName) {
-      messages.push({
-        role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. O nome dele é ${context.leadName} (do perfil WhatsApp). Apresente-se de forma breve e calorosa usando o nome dele (ex.: "${saudacao}, ${context.leadName}! Sou o Luma, da Pneu Zero 🔴 Em que posso te ajudar?"). NÃO pergunte o nome, pois já sabe. Seja natural como no WhatsApp.`,
-      });
+      contextParts.push(`Esta é a PRIMEIRA mensagem do cliente. O nome dele é ${context.leadName} (do perfil WhatsApp). Apresente-se de forma breve e calorosa usando o nome dele (ex.: "${saudacao}, ${context.leadName}! Sou o Luma, da Pneu Zero 🔴 Em que posso te ajudar?"). NÃO pergunte o nome, pois já sabe. Seja natural como no WhatsApp.`);
     } else if (isFirstMessage) {
-      messages.push({
-        role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou o Luma, da Pneu Zero 🔴") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
-      });
+      contextParts.push(`Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou o Luma, da Pneu Zero 🔴") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`);
     } else if (context.leadName) {
-      messages.push({
-        role: "system",
-        content: `O nome do cliente é: ${context.leadName}`,
-      });
+      contextParts.push(`O nome do cliente é: ${context.leadName}`);
     } else {
       const msgCount = context.messageHistory.filter(m => m.direction === "in").length;
       if (msgCount >= 2) {
-        messages.push({
-          role: "system",
-          content: `ATENÇÃO: Você AINDA NÃO SABE o nome do cliente (já são ${msgCount + 1} mensagens dele). PRIORIDADE MÁXIMA: pergunte o nome AGORA de forma direta e calorosa. Ex: "Antes de continuar, como posso te chamar? 😊" — NÃO prossiga com o quiz sem saber o nome.`,
-        });
+        contextParts.push(`ATENÇÃO: Você AINDA NÃO SABE o nome do cliente (já são ${msgCount + 1} mensagens dele). Pergunte o nome AGORA de forma direta e calorosa. Ex: "Antes de continuar, como posso te chamar? 😊"`);
       } else {
-        messages.push({
-          role: "system",
-          content: `Você ainda não sabe o nome do cliente. Pergunte o nome dele de forma natural e calorosa. Ex: "Como posso te chamar?"`,
-        });
+        contextParts.push(`Você ainda não sabe o nome do cliente. Pergunte o nome dele de forma natural e calorosa. Ex: "Como posso te chamar?"`);
       }
     }
 
     // Coleta apenas CIDADE (email e outros dados extras só se cliente passar
     // espontaneamente — extractLeadData ainda captura pela regex).
     if (context.leadCity) {
-      messages.push({
-        role: "system",
-        content: `Cidade do cliente: ${context.leadCity}. NÃO pergunte cidade de novo.`,
-      });
+      contextParts.push(`Cidade do cliente: ${context.leadCity}. NÃO pergunte cidade de novo.`);
     } else if (context.leadName && !isFirstMessage) {
       const inMsgCount = context.messageHistory.filter((m) => m.direction === "in").length;
       if (inMsgCount >= 4) {
-        messages.push({
-          role: "system",
-          content: `Ainda FALTA saber a CIDADE do cliente. Pergunte de forma natural quando fizer sentido. Ex: "Você é de qual cidade aqui no Maranhão?". NÃO peça email ou outros dados — só cidade.`,
-        });
+        contextParts.push(`Ainda FALTA saber a CIDADE do cliente. Pergunte de forma natural quando fizer sentido. Ex: "Você é de qual cidade aqui no Maranhão?". NÃO peça email ou outros dados — só cidade.`);
       } else if (inMsgCount >= 2) {
-        messages.push({
-          role: "system",
-          content: `Quando achar um gancho natural, pergunte a cidade. Ex: "Aproveitando, você é de qual cidade?". NÃO peça email.`,
-        });
+        contextParts.push(`Quando achar um gancho natural, pergunte a cidade. Ex: "Aproveitando, você é de qual cidade?". NÃO peça email.`);
       }
     }
 
     // Reforça: NÃO pedir email em hipótese alguma.
-    messages.push({
-      role: "system",
-      content: `IMPORTANTE: NUNCA peça email do cliente. Não é necessário pra atendimento. Se o cliente passar espontaneamente, OK — sistema captura sozinho.`,
-    });
+    contextParts.push(`NUNCA peça email do cliente. Não é necessário pra atendimento. Se o cliente passar espontaneamente, OK — sistema captura sozinho.`);
 
     // Extrai dados estruturados do veículo (placa, medida pneu, km, ano) e faz upsert.
     const vehicleData = extractVehicleData(userMessage);
@@ -373,40 +351,36 @@ export async function generateAIResponse(
     const vehicles = await getVehiclesByLead(context.leadId);
     const vehicleBlock = formatVehiclesForAI(vehicles);
     if (vehicleBlock) {
-      messages.push({ role: "system", content: vehicleBlock });
+      contextParts.push(vehicleBlock);
     }
 
     // Resumo da conversa salvo (Lead.summary): contexto comprimido de tudo
     // que aconteceu antes da janela de histórico. Crucial para conversas
     // longas onde as msgs antigas saíram da janela.
     if (context.leadSummary && context.leadSummary.trim().length > 0) {
-      messages.push({
-        role: "system",
-        content: `<ResumoConversa>\n${context.leadSummary.trim()}\n</ResumoConversa>\n\nIMPORTANTE: O bloco acima é o resumo da conversa anterior com este cliente. Use para CONTINUAR de onde paramos — não recomece nem peça dados que já foram coletados.`,
-      });
+      contextParts.push(`<ResumoConversa>\n${context.leadSummary.trim()}\n</ResumoConversa>\n\nO bloco acima é o resumo da conversa anterior com este cliente. Use para CONTINUAR de onde paramos — não recomece nem peça dados que já foram coletados.`);
     }
 
     // Sinaliza retomada quando cliente volta após pausa (>12h)
     if (context.gapHours && context.gapHours > 12) {
-      const periodo =
+      const periodoPausa =
         context.gapHours < 24 ? `${Math.round(context.gapHours)} horas`
         : context.gapHours < 168 ? `${Math.round(context.gapHours / 24)} dias`
         : `${Math.round(context.gapHours / 168)} semana(s)`;
-      messages.push({
-        role: "system",
-        content: `O cliente está RETOMANDO a conversa após ${periodo} de pausa. Seja natural: cumprimente brevemente, faça referência ao que vocês conversaram (use o ResumoConversa) e retome de onde parou. NÃO trate como conversa nova.`,
-      });
+      contextParts.push(`O cliente está RETOMANDO a conversa após ${periodoPausa} de pausa. Seja natural: cumprimente brevemente, faça referência ao que vocês conversaram (use o ResumoConversa) e retome de onde parou. NÃO trate como conversa nova.`);
     }
 
     // Sinaliza retomada após handoff humano: Luma precisa continuar de onde
     // o atendente parou, não reiniciar do zero nem ignorar o que ele disse.
     if (context.lastOutFromHuman) {
       const agente = context.lastHumanAgent ?? "um atendente";
-      messages.push({
-        role: "system",
-        content: `IMPORTANTE — RETOMADA APÓS ATENDIMENTO HUMANO: As últimas mensagens enviadas ao cliente vieram do atendente *${agente}* (não suas). Leia o que ${agente} disse, entenda o ponto da conversa, e CONTINUE de onde ele parou. Não recomece a conversa, não repita perguntas que ${agente} já fez, não desfaça compromissos ou promessas que ${agente} fez. Mantenha sua personalidade do Luma, mas honre o que o humano combinou.`,
-      });
+      contextParts.push(`RETOMADA APÓS ATENDIMENTO HUMANO: As últimas mensagens enviadas ao cliente vieram do atendente *${agente}* (não suas). Leia o que ${agente} disse, entenda o ponto da conversa, e CONTINUE de onde ele parou. Não recomece a conversa, não repita perguntas que ${agente} já fez, não desfaça compromissos ou promessas que ${agente} fez. Mantenha sua personalidade do Luma, mas honre o que o humano combinou.`);
     }
+
+    const messages: Message[] = [
+      { role: "system", content: systemPrompt },
+      { role: "system", content: `<Contexto>\n${contextParts.join("\n\n---\n\n")}\n</Contexto>` },
+    ];
 
     // Adiciona histórico de mensagens (últimas 30 — janela maior para
     // continuidade em conversas longas). Mensagens de áudio/imagem usam
@@ -425,7 +399,7 @@ export async function generateAIResponse(
     // Adiciona a mensagem atual
     messages.push({ role: "user", content: userMessage });
 
-    const model = settings.openaiModel || "gpt-4o-mini";
+    const model = settings.openaiModel || "gpt-4o";
     const toolCtx: ToolContext = {
       leadId: context.leadId,
       organizationId: context.organizationId ?? "",
@@ -443,13 +417,16 @@ export async function generateAIResponse(
     const toolsCalled = new Set<string>();
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      // Último round: força resposta em texto — sem isso, 4 rounds só de
+      // tool-calls caem no fallback genérico que ignora a conversa.
+      const isLastRound = round === MAX_TOOL_ROUNDS - 1;
       const completion = await openai.chat.completions.create({
         model,
         messages: openaiMessages,
         tools: TOOL_DEFINITIONS,
-        tool_choice: "auto",
-        max_tokens: 400,
-        temperature: 0.85,
+        tool_choice: isLastRound ? "none" : "auto",
+        max_tokens: 600,
+        temperature: 0.6,
         presence_penalty: 0.3,
         frequency_penalty: 0.25,
       });
@@ -500,8 +477,9 @@ export async function generateAIResponse(
 
     const cotacaoEnviada = toolsCalled.has("buscar_pneu") || toolsCalled.has("buscar_servico");
     const handoffSolicitado = toolsCalled.has("transferir_humano");
+    const statusAtualizadoPorIA = toolsCalled.has("atualizar_status");
 
-    return { response: response.trim(), extractedData, cotacaoEnviada, handoffSolicitado };
+    return { response: response.trim(), extractedData, cotacaoEnviada, handoffSolicitado, statusAtualizadoPorIA };
   } catch (error) {
     console.error("Erro ao gerar resposta IA:", error);
     return { response: generateFallbackResponse(userMessage, context.leadName) };
@@ -539,76 +517,8 @@ function extractLeadData(
     }
   }
 
-  // Extrai nome: padrões explícitos + fallback para respostas curtas (quando bot perguntou o nome)
-  if (!context.leadName) {
-    const msg = message.trim();
-    
-    // Palavras comuns que NÃO são nomes de pessoa
-    const NOT_NAMES = new Set([
-      "vi", "sim", "não", "nao", "oi", "ola", "olá", "ok", "então", "entao",
-      "quanto", "custa", "qual", "valor", "preço", "preco", "plano", "planos",
-      "me", "explica", "explicar", "como", "funciona", "quero", "saber", "mais",
-      "pode", "gostaria", "tenho", "interesse", "informação", "informacao",
-      "por", "favor", "bom", "dia", "boa", "tarde", "noite", "obrigado", "obrigada",
-      "valeu", "tudo", "bem", "tá", "ta", "to", "tô", "aqui", "isso", "esse",
-      "essa", "tem", "ter", "ser", "uma", "uns", "dos", "das", "para", "pra",
-      "saúde", "saude", "exame", "exames", "consulta", "consultas", "médico",
-      "medico", "clínica", "clinica", "hospital", "atendente", "humano",
-      "whatsapp", "mensagem", "obrigado", "brigado", "brigada",
-    ]);
-
-    // 1. Padrões explícitos de identificação
-    const namePatterns = [
-      /(?:me chamo|meu nome é|meu nome e|sou o|sou a|pode me chamar de|chamo|é o|é a)\s+([A-ZÀ-Úa-zà-ú][a-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú][a-zà-ú]+){0,2})/i,
-    ];
-
-    for (const pattern of namePatterns) {
-      const match = msg.match(pattern);
-      if (match && match[1]) {
-        const potentialName = match[1].trim();
-        const lowerWords = potentialName.toLowerCase().split(/\s+/);
-        if (
-          potentialName.length >= 2 &&
-          !/\d/.test(potentialName) &&
-          !lowerWords.some((w) => NOT_NAMES.has(w))
-        ) {
-          result.name = potentialName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-          break;
-        }
-      }
-    }
-
-    // 2. Fallback: se a última msg do bot perguntou o nome e a resposta é curta (1-3 palavras)
-    if (!result.name) {
-      const lastBotMsg = context.messageHistory
-        .filter(m => m.direction === "out" && m.body)
-        .pop()?.body?.toLowerCase() || "";
-      const botAskedForName = lastBotMsg.includes("chamar") ||
-        lastBotMsg.includes("seu nome") ||
-        lastBotMsg.includes("quem fala") ||
-        lastBotMsg.includes("como posso te chamar") ||
-        lastBotMsg.includes("qual seu nome") ||
-        lastBotMsg.includes("qual o seu nome");
-
-      if (botAskedForName) {
-        // Remove saudações e pontuação da resposta
-        const cleaned = msg
-          .replace(/^(oi|olá|ola|hey|eai|e ai|bom dia|boa tarde|boa noite)[,!.\s]*/i, "")
-          .replace(/[!.,?]+$/g, "")
-          .trim();
-        const words = cleaned.split(/\s+/).filter(w => w.length >= 2);
-
-        if (words.length >= 1 && words.length <= 3) {
-          const allValid = words.every(w => 
-            /^[A-ZÀ-Úa-zà-ú]+$/.test(w) && !NOT_NAMES.has(w.toLowerCase())
-          );
-          if (allValid) {
-            result.name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-          }
-        }
-      }
-    }
-  }
+  // Nome NÃO é extraído aqui: extractAndSaveMemories (memory.ts) já cobre
+  // padrões explícitos e resposta curta pós-pergunta — caminho único evita conflito.
 
   return result;
 }
