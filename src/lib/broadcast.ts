@@ -205,9 +205,11 @@ export function startBroadcastWorker(intervalMs = 20000): void {
   const loop = () => {
     tickBroadcasts()
       .catch((e) => console.error("[broadcast] tick error:", e))
-      .finally(() => setTimeout(loop, intervalMs));
+      // unref: o timer não segura o event loop → serviço reinicia limpo (sem
+      // esperar SIGTERM estourar em 90s). Um envio em andamento termina antes.
+      .finally(() => setTimeout(loop, intervalMs).unref());
   };
-  setTimeout(loop, intervalMs);
+  setTimeout(loop, intervalMs).unref();
   console.log("[broadcast] worker iniciado");
 }
 

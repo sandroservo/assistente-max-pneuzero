@@ -356,11 +356,17 @@ export async function generateAIResponse(
 
     // Proposta de horário pendente: vendedor propôs uma data/hora e aguarda o
     // cliente confirmar. Se o cliente aceitar, Luma chama confirmar_proposta.
-    const pendingProposal = await prisma.appointmentRequest.findFirst({
-      where: { leadId: context.leadId, status: "proposed", proposedAt: { not: null } },
-      orderBy: { updatedAt: "desc" },
-      select: { serviceName: true, proposedAt: true },
-    });
+    // try/catch: nunca deixe uma falha aqui derrubar a resposta da Luma.
+    const pendingProposal = await prisma.appointmentRequest
+      .findFirst({
+        where: { leadId: context.leadId, status: "proposed", proposedAt: { not: null } },
+        orderBy: { updatedAt: "desc" },
+        select: { serviceName: true, proposedAt: true },
+      })
+      .catch((err) => {
+        console.warn("[ai] falha ao buscar proposta pendente (ignorado):", err);
+        return null;
+      });
     if (pendingProposal?.proposedAt) {
       const dataFmt = new Intl.DateTimeFormat("pt-BR", {
         timeZone: "America/Sao_Paulo",

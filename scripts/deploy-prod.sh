@@ -54,8 +54,17 @@ echo '→ npm ci'
 sudo -u assistente-max npm ci --no-audit --no-fund 2>&1 | tail -3
 echo '→ prisma generate'
 sudo -u assistente-max npx prisma generate 2>&1 | tail -3
-echo '→ prisma db push (sem migrate-reset)'
-sudo -u assistente-max bash -c 'set -a && source .env && set +a && npx prisma db push --schema=prisma/schema.prisma --skip-generate' 2>&1 | tail -3
+echo '→ prisma db push (best-effort — schema tem colunas GENERATED que o Prisma não modela)'
+# ATENÇÃO: este banco usa colunas tsvector GENERATED (FTS de Message/LeadMemory)
+# que o Prisma db push NÃO consegue reconciliar (tenta DROP DEFAULT → erra).
+# Push é all-or-nothing → NÃO aplica mudanças aqui e NUNCA deve abortar o deploy.
+# → Mudou o schema? Aplique via SQL manual (psql). Ver docs/specs/deploy.md.
+if sudo -u assistente-max bash -c 'set -a && source .env && set +a && npx prisma db push --schema=prisma/schema.prisma --skip-generate' > /tmp/dbpush.out 2>&1; then
+  echo '   db push OK'
+else
+  echo '⚠️  db push NÃO aplicou (esperado neste banco — colunas GENERATED). Mudanças de schema exigem SQL manual. Deploy segue.'
+fi
+tail -5 /tmp/dbpush.out || true
 echo '→ build'
 sudo -u assistente-max bash -c 'set -a && source .env && set +a && npm run build' 2>&1 | tail -3
 echo '→ symlink current'
