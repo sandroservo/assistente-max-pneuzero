@@ -69,6 +69,10 @@ export function SolicitacoesPendentes() {
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [proposingId, setProposingId] = useState<string | null>(null);
   const [proposeValue, setProposeValue] = useState("");
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageItems = items.slice((page - 1) * PAGE_SIZE, (page - 1) * PAGE_SIZE + PAGE_SIZE);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +92,10 @@ export function SolicitacoesPendentes() {
     }, 15000);
     return () => clearInterval(iv);
   }, [actingOn, proposingId]);
+
+  // Reset pra página 1 ao trocar filtro ou quando o conjunto encolhe.
+  useEffect(() => { setPage(1); }, [filter]);
+  useEffect(() => { if (page > totalPages) setPage(1); }, [page, totalPages]);
 
   const approve = useCallback(async (id: string) => {
     if (!confirm("Aprovar esta solicitação? Vou criar o agendamento e avisar o cliente no WhatsApp.")) return;
@@ -187,7 +195,7 @@ export function SolicitacoesPendentes() {
       )}
 
       <ul className="space-y-2">
-        {items.map((r) => (
+        {pageItems.map((r) => (
           <li key={r.id} className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="flex items-start gap-4">
               <div className="w-16 text-center shrink-0">
@@ -286,6 +294,28 @@ export function SolicitacoesPendentes() {
           </li>
         ))}
       </ul>
+
+      {items.length > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-3 mt-2 text-sm">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          <span className="text-gray-500">Página {page} de {totalPages}</span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
     </div>
   );
 }

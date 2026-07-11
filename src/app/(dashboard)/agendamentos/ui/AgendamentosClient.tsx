@@ -83,16 +83,32 @@ export function AgendamentosClient() {
     return () => { cancelled = true; };
   }, [monthFrom, monthTo, q, status, refreshTick]);
 
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+
+  // Volta pra página 1 quando o conjunto encolhe além da página atual.
+  useEffect(() => {
+    if (page > totalPages) setPage(1);
+  }, [page, totalPages]);
+
+  // Reset ao trocar busca/status (novo conjunto de resultados).
+  useEffect(() => {
+    setPage(1);
+  }, [q, status]);
+
   const grouped = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const pageItems = items.slice(start, start + PAGE_SIZE);
     const out: { day: string; iso: string; items: Appointment[] }[] = [];
-    for (const a of items) {
+    for (const a of pageItems) {
       const day = fmtDay(a.scheduledAt);
       const last = out[out.length - 1];
       if (last && last.day === day) last.items.push(a);
       else out.push({ day, iso: a.scheduledAt, items: [a] });
     }
     return out;
-  }, [items]);
+  }, [items, page]);
 
   const cancel = useCallback(async (id: string) => {
     if (!confirm("Cancelar este agendamento?")) return;
@@ -260,6 +276,28 @@ export function AgendamentosClient() {
           </div>
         ))}
       </div>
+
+      {items.length > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-3 mt-6 text-sm">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          <span className="text-gray-500">Página {page} de {totalPages}</span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
 
       </div>
       )}
