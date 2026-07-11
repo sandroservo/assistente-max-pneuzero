@@ -80,6 +80,15 @@ export function SolicitacoesPendentes() {
     return () => { cancelled = true; };
   }, [filter, tick]);
 
+  // Auto-refresh a cada 15s (pausa se a aba do navegador estiver oculta).
+  // Não recarrega enquanto o vendedor estiver propondo/agindo, pra não perder o form aberto.
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (!document.hidden && !actingOn && !proposingId) setTick((t) => t + 1);
+    }, 15000);
+    return () => clearInterval(iv);
+  }, [actingOn, proposingId]);
+
   const approve = useCallback(async (id: string) => {
     if (!confirm("Aprovar esta solicitação? Vou criar o agendamento e avisar o cliente no WhatsApp.")) return;
     setActingOn(id);
@@ -169,7 +178,7 @@ export function SolicitacoesPendentes() {
         </button>
       </div>
 
-      {loading && <p className="text-center text-gray-500 py-12">Carregando…</p>}
+      {loading && items.length === 0 && <p className="text-center text-gray-500 py-12">Carregando…</p>}
       {!loading && items.length === 0 && (
         <div className="text-center py-12 text-gray-400">
           <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />

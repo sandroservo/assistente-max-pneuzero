@@ -113,6 +113,16 @@ export function AgendamentosClient() {
   const tabFromUrl = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab");
   const [tab, setTab] = useState<"agendados" | "solicitacoes">(tabFromUrl === "solicitacoes" ? "solicitacoes" : "agendados");
 
+  // Auto-refresh da aba "agendados" a cada 15s (pausa se a aba do navegador
+  // estiver oculta pra não gastar request à toa).
+  useEffect(() => {
+    if (tab !== "agendados") return;
+    const iv = setInterval(() => {
+      if (!document.hidden) setRefreshTick((t) => t + 1);
+    }, 15000);
+    return () => clearInterval(iv);
+  }, [tab]);
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -184,7 +194,7 @@ export function AgendamentosClient() {
         </select>
       </div>
 
-      {loading && <p className="text-center text-gray-500 py-12">Carregando…</p>}
+      {loading && items.length === 0 && <p className="text-center text-gray-500 py-12">Carregando…</p>}
       {!loading && grouped.length === 0 && (
         <div className="text-center py-12 text-gray-400">
           <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
