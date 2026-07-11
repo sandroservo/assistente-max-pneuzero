@@ -2,15 +2,18 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * API de disparo em massa via SSE (Server-Sent Events)
- * Envia mensagens sequencialmente com delay aleatório (10-30s)
- * para evitar bloqueio do número na Evolution API / WhatsApp.
+ * Disparo em massa PERSISTENTE. POST cria o job no banco e retorna jobId
+ * na hora; o worker in-process (lib/broadcast + instrumentation) envia em
+ * background com espaçamento anti-ban. Sobrevive a fechar o navegador.
+ * GET lista o job ativo / status para o painel fazer polling.
  */
 
-import { evolutionSendText, evolutionSendMedia } from "@/lib/evolution";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { createBroadcast } from "@/lib/broadcast";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 minutos máximo
+export const runtime = "nodejs";
 
 interface BroadcastContact {
   phone: string;
@@ -20,44 +23,10 @@ interface BroadcastContact {
 interface BroadcastPayload {
   contacts: BroadcastContact[];
   message: string;
-  imageBase64?: string; // base64 puro (sem prefixo data:...)
+  imageBase64?: string;
   imageMimeType?: string;
-}
-
-/**
- * Gera delays dinâmicos e imprevisíveis para simular comportamento humano.
- * Usa distribuição ponderada com 3 faixas + pausas longas esporádicas.
- */
-function dynamicDelay(index: number, total: number): number {
-  const roll = Math.random();
-
-  let base: number;
-  if (roll < 0.50) {
-    // 50% — pausa curta: 8-18s
-    base = 8000 + Math.random() * 10000;
-  } else if (roll < 0.85) {
-    // 35% — pausa média: 20-45s
-    base = 20000 + Math.random() * 25000;
-  } else {
-    // 15% — pausa longa: 50-90s
-    base = 50000 + Math.random() * 40000;
-  }
-
-  // Jitter ±20% para nunca repetir o mesmo intervalo
-  const jitter = base * (0.8 + Math.random() * 0.4);
-
-  // A cada ~5 envios, chance de 40% de pausa extra (30-60s)
-  // simula "distração" humana
-  const extraPause =
-    index > 0 && index % 5 === 0 && Math.random() < 0.4
-      ? 30000 + Math.random() * 30000
-      : 0;
-
-  return Math.round(jitter + extraPause);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  minDelaySec?: number;
+  maxDelaySec?: number;
 }
 
 export async function POST(req: Request) {
@@ -66,115 +35,99 @@ export async function POST(req: Request) {
     const { contacts, message, imageBase64, imageMimeType } = body;
 
     if (!contacts?.length || !message?.trim()) {
-      return new Response(
-        JSON.stringify({ error: "Contatos e mensagem são obrigatórios" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+      return NextResponse.json(
+        { error: "Contatos e mensagem são obrigatórios" },
+        { status: 400 }
       );
     }
 
-    // Embaralha os contatos para ordem aleatória
-    const shuffled = [...contacts].sort(() => Math.random() - 0.5);
+    const minDelaySec = Math.max(15, body.minDelaySec ?? 45);
+    const maxDelaySec = Math.max(minDelaySec, body.maxDelaySec ?? 120);
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        function send(data: Record<string, unknown>) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
-        }
-
-        send({
-          type: "start",
-          total: shuffled.length,
-          message: `Iniciando disparo para ${shuffled.length} contatos...`,
-        });
-
-        let sent = 0;
-        let failed = 0;
-
-        for (let i = 0; i < shuffled.length; i++) {
-          const contact = shuffled[i];
-
-          try {
-            // Se tem imagem, envia como mídia com caption
-            if (imageBase64) {
-              await evolutionSendMedia({
-                number: contact.phone,
-                mediatype: "image",
-                media: imageBase64,
-                mimetype: imageMimeType || "image/jpeg",
-                caption: message,
-              });
-            } else {
-              await evolutionSendText({
-                number: contact.phone,
-                text: message,
-              });
-            }
-
-            sent++;
-            send({
-              type: "progress",
-              index: i + 1,
-              total: shuffled.length,
-              sent,
-              failed,
-              contact: contact.name || contact.phone,
-              status: "ok",
-            });
-          } catch (error) {
-            failed++;
-            const errMsg =
-              error instanceof Error ? error.message : "Erro desconhecido";
-            send({
-              type: "progress",
-              index: i + 1,
-              total: shuffled.length,
-              sent,
-              failed,
-              contact: contact.name || contact.phone,
-              status: "error",
-              error: errMsg,
-            });
-          }
-
-          // Delay dinâmico e imprevisível (exceto no último)
-          if (i < shuffled.length - 1) {
-            const delay = dynamicDelay(i, shuffled.length);
-            send({
-              type: "waiting",
-              delay,
-              message: `Aguardando ${Math.round(delay / 1000)}s antes do próximo envio...`,
-            });
-            await sleep(delay);
-          }
-        }
-
-        send({
-          type: "done",
-          sent,
-          failed,
-          total: shuffled.length,
-          message: `Disparo finalizado: ${sent} enviados, ${failed} falharam.`,
-        });
-
-        controller.close();
-      },
+    const job = await createBroadcast({
+      contacts,
+      message,
+      imageBase64,
+      imageMime: imageMimeType,
+      minDelaySec,
+      maxDelaySec,
     });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+    return NextResponse.json({
+      ok: true,
+      jobId: job.id,
+      total: job.total,
+      message: `Disparo criado para ${job.total} contatos. Roda em background — pode fechar a aba.`,
     });
   } catch (error) {
-    console.error("[Broadcast] Erro:", error);
-    return new Response(
-      JSON.stringify({ error: "Erro interno no broadcast" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    console.error("[Broadcast] Erro ao criar job:", error);
+    return NextResponse.json({ error: "Erro interno no broadcast" }, { status: 500 });
+  }
+}
+
+/**
+ * GET /api/broadcast          → job ativo mais recente (RUNNING) + progresso
+ * GET /api/broadcast?id=xxx   → status de um job específico
+ */
+export async function GET(req: Request) {
+  try {
+    const id = new URL(req.url).searchParams.get("id");
+
+    const broadcast = id
+      ? await prisma.broadcast.findUnique({ where: { id } })
+      : await prisma.broadcast.findFirst({
+          where: { status: "RUNNING" },
+          orderBy: { createdAt: "desc" },
+        });
+
+    if (!broadcast) {
+      return NextResponse.json({ active: false });
+    }
+
+    // Próximo envio agendado (pra UI mostrar "próximo em Xs")
+    const next = await prisma.broadcastRecipient.findFirst({
+      where: { broadcastId: broadcast.id, status: "QUEUED" },
+      orderBy: { scheduledAt: "asc" },
+      select: { scheduledAt: true },
+    });
+
+    // Últimos processados (feed do painel)
+    const recent = await prisma.broadcastRecipient.findMany({
+      where: { broadcastId: broadcast.id, status: { in: ["SENT", "FAILED"] } },
+      orderBy: { sentAt: "desc" },
+      take: 15,
+      select: { name: true, phone: true, status: true, error: true },
+    });
+
+    return NextResponse.json({
+      active: broadcast.status === "RUNNING",
+      id: broadcast.id,
+      status: broadcast.status,
+      total: broadcast.total,
+      sent: broadcast.sent,
+      failed: broadcast.failed,
+      nextAt: next?.scheduledAt ?? null,
+      recent,
+    });
+  } catch (error) {
+    console.error("[Broadcast] Erro no GET:", error);
+    return NextResponse.json({ error: "Erro ao consultar status" }, { status: 500 });
+  }
+}
+
+/** DELETE /api/broadcast?id=xxx → cancela o job (para envios futuros). */
+export async function DELETE(req: Request) {
+  try {
+    const id = new URL(req.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
+
+    await prisma.broadcast.update({
+      where: { id },
+      data: { status: "CANCELED" },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("[Broadcast] Erro ao cancelar:", error);
+    return NextResponse.json({ error: "Erro ao cancelar" }, { status: 500 });
   }
 }

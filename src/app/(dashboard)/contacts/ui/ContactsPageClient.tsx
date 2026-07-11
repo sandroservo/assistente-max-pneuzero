@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -113,10 +113,14 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
   const [broadcastImage, setBroadcastImage] = useState<string | null>(null);
   const [broadcastImageName, setBroadcastImageName] = useState<string | null>(null);
   const [broadcastImageMime, setBroadcastImageMime] = useState<string>("image/jpeg");
+  const [minDelaySec, setMinDelaySec] = useState(45);
+  const [maxDelaySec, setMaxDelaySec] = useState(120);
   const [isSending, setIsSending] = useState(false);
   const [broadcastLogs, setBroadcastLogs] = useState<BroadcastLog[]>([]);
   const [broadcastProgress, setBroadcastProgress] = useState({ sent: 0, failed: 0, total: 0 });
   const [broadcastDone, setBroadcastDone] = useState(false);
+  const [broadcastJobId, setBroadcastJobId] = useState<string | null>(null);
+  const [nextSendAt, setNextSendAt] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -177,7 +181,37 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
     setBroadcastImageName(null);
   };
 
-  // Broadcast via SSE
+  // Aplica um snapshot de status do job (vindo do GET) na UI.
+  const applyStatus = useCallback((data: {
+    active?: boolean;
+    id?: string;
+    status?: string;
+    total?: number;
+    sent?: number;
+    failed?: number;
+    nextAt?: string | null;
+    recent?: { name: string; phone: string; status: string; error?: string | null }[];
+  }) => {
+    setBroadcastProgress({ sent: data.sent ?? 0, failed: data.failed ?? 0, total: data.total ?? 0 });
+    setNextSendAt(data.nextAt ?? null);
+    if (data.recent) {
+      setBroadcastLogs(
+        data.recent
+          .slice()
+          .reverse()
+          .map((r) => ({
+            contact: r.name || r.phone,
+            status: r.status === "SENT" ? "ok" : "error",
+            message: r.error || undefined,
+          }))
+      );
+    }
+    const finished = data.status === "DONE" || data.status === "CANCELED";
+    setBroadcastDone(finished);
+    setIsSending(!finished && !!data.id);
+  }, []);
+
+  // Cria o job (roda em background no servidor) e começa o polling.
   const startBroadcast = useCallback(async () => {
     const selected = contacts.filter((c) => selectedIds.has(c.id));
     if (!selected.length || !broadcastMessage.trim()) return;
@@ -192,94 +226,73 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contacts: selected.map((c) => ({
-            phone: c.phone,
-            name: c.name || c.phone,
-          })),
+          contacts: selected.map((c) => ({ phone: c.phone, name: c.name || c.phone })),
           message: broadcastMessage,
           imageBase64: broadcastImage || undefined,
           imageMimeType: broadcastImageMime || undefined,
+          minDelaySec,
+          maxDelaySec,
         }),
       });
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        setBroadcastLogs((prev) => [
-          ...prev,
-          { contact: "Sistema", status: "error", message: data.error || "Erro ao iniciar disparo" },
-        ]);
+      if (!res.ok || !data.jobId) {
+        setBroadcastLogs([{ contact: "Sistema", status: "error", message: data.error || "Erro ao iniciar disparo" }]);
         setIsSending(false);
         return;
       }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const data = JSON.parse(line.replace("data: ", ""));
-
-            if (data.type === "progress") {
-              setBroadcastProgress({
-                sent: data.sent,
-                failed: data.failed,
-                total: data.total,
-              });
-              setBroadcastLogs((prev) => [
-                ...prev,
-                {
-                  contact: data.contact,
-                  status: data.status,
-                  message: data.error,
-                },
-              ]);
-            } else if (data.type === "waiting") {
-              setBroadcastLogs((prev) => [
-                ...prev,
-                {
-                  contact: "⏳",
-                  status: "waiting",
-                  message: data.message,
-                },
-              ]);
-            } else if (data.type === "done") {
-              setBroadcastProgress({
-                sent: data.sent,
-                failed: data.failed,
-                total: data.total,
-              });
-              setBroadcastDone(true);
-            }
-
-            // Auto-scroll logs
-            setTimeout(() => {
-              logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 50);
-          } catch {
-            // Ignore parse errors
-          }
-        }
-      }
+      setBroadcastJobId(data.jobId);
     } catch (error) {
       console.error("Broadcast error:", error);
-      setBroadcastLogs((prev) => [
-        ...prev,
-        { contact: "Sistema", status: "error", message: "Conexão perdida" },
-      ]);
-    } finally {
+      setBroadcastLogs([{ contact: "Sistema", status: "error", message: "Falha ao criar disparo" }]);
       setIsSending(false);
     }
-  }, [contacts, selectedIds, broadcastMessage, broadcastImage, broadcastImageMime]);
+  }, [contacts, selectedIds, broadcastMessage, broadcastImage, broadcastImageMime, minDelaySec, maxDelaySec]);
+
+  const cancelBroadcast = useCallback(async () => {
+    if (!broadcastJobId) return;
+    await fetch(`/api/broadcast?id=${broadcastJobId}`, { method: "DELETE" }).catch(() => {});
+    setBroadcastDone(true);
+    setIsSending(false);
+  }, [broadcastJobId]);
+
+  // Retoma o job ativo ao abrir o modal (sobrevive a fechar o navegador).
+  useEffect(() => {
+    if (!showBroadcast || broadcastJobId) return;
+    fetch("/api/broadcast")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.active && data.id) {
+          setBroadcastJobId(data.id);
+          applyStatus(data);
+        }
+      })
+      .catch(() => {});
+  }, [showBroadcast, broadcastJobId, applyStatus]);
+
+  // Polling do status enquanto há job ativo.
+  useEffect(() => {
+    if (!broadcastJobId || broadcastDone) return;
+    let alive = true;
+    const poll = async () => {
+      try {
+        const r = await fetch(`/api/broadcast?id=${broadcastJobId}`);
+        const data = await r.json();
+        if (alive) applyStatus(data);
+      } catch {
+        // silencioso — tenta de novo no próximo tick
+      }
+      setTimeout(() => {
+        logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    };
+    poll();
+    const iv = setInterval(poll, 5000);
+    return () => {
+      alive = false;
+      clearInterval(iv);
+    };
+  }, [broadcastJobId, broadcastDone, applyStatus]);
 
   const handleSaveContact = useCallback(async () => {
     setSaveError(null);
@@ -320,6 +333,8 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
     setBroadcastLogs([]);
     setBroadcastProgress({ sent: 0, failed: 0, total: 0 });
     setBroadcastDone(false);
+    setBroadcastJobId(null);
+    setNextSendAt(null);
     setSelectedIds(new Set());
   };
 
@@ -659,7 +674,40 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
                       className="w-full px-4 py-3 border border-red-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-500 text-sm"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      {broadcastMessage.length} caracteres
+                      {broadcastMessage.length} caracteres · use <code>{"{nome}"}</code> pro nome do contato e <code>{"{oi|olá|e aí}"}</code> pra variar o texto (anti-ban).
+                    </p>
+                  </div>
+
+                  {/* Espaçamento entre envios (anti-ban) */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="broadcast-min" className="block text-sm font-medium text-red-700 mb-1">
+                        Espaçamento mín. (s)
+                      </label>
+                      <input
+                        id="broadcast-min"
+                        type="number"
+                        min={15}
+                        value={minDelaySec}
+                        onChange={(e) => setMinDelaySec(Math.max(15, Number(e.target.value) || 15))}
+                        className="w-full px-4 py-2.5 border border-red-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="broadcast-max" className="block text-sm font-medium text-red-700 mb-1">
+                        Espaçamento máx. (s)
+                      </label>
+                      <input
+                        id="broadcast-max"
+                        type="number"
+                        min={minDelaySec}
+                        value={maxDelaySec}
+                        onChange={(e) => setMaxDelaySec(Math.max(minDelaySec, Number(e.target.value) || minDelaySec))}
+                        className="w-full px-4 py-2.5 border border-red-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-500 text-sm"
+                      />
+                    </div>
+                    <p className="col-span-2 text-xs text-gray-400 -mt-1">
+                      Intervalo aleatório entre {minDelaySec}s e {maxDelaySec}s, com pausas longas esporádicas. Maior = mais seguro contra bloqueio.
                     </p>
                   </div>
 
@@ -794,10 +842,19 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
                 </>
               )}
               {isSending && (
-                <Button disabled className="bg-gray-200 text-gray-500">
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enviando...
-                </Button>
+                <>
+                  <span className="mr-auto text-xs text-gray-500 self-center">
+                    Roda em background — pode fechar a aba.
+                    {nextSendAt && ` Próximo ~${Math.max(0, Math.round((new Date(nextSendAt).getTime() - Date.now()) / 1000))}s.`}
+                  </span>
+                  <Button variant="outline" onClick={cancelBroadcast}>
+                    Parar disparo
+                  </Button>
+                  <Button disabled className="bg-gray-200 text-gray-500">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </Button>
+                </>
               )}
               {broadcastDone && (
                 <Button onClick={resetBroadcast} className="bg-[#CC0000] hover:bg-[#990000] text-white">

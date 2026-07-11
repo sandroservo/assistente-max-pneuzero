@@ -774,3 +774,45 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+// ==========================================
+// DISPARO EM MASSA (broadcast persistente)
+// ==========================================
+// Job de disparo sobrevive a fechar navegador / restart do serviço:
+// estado fica no banco, worker in-process (instrumentation.ts) processa
+// destinatários no scheduledAt de cada um (espaçamento anti-ban embutido).
+model Broadcast {
+  id          String   @id @default(cuid())
+  message     String   @db.Text
+  imageBase64 String?  @db.Text // base64 puro (ponytail: em DB; migrar p/ storage se ficar pesado)
+  imageMime   String?
+  minDelaySec Int      @default(45)
+  maxDelaySec Int      @default(120)
+  status      String   @default("RUNNING") // RUNNING | DONE | CANCELED
+  total       Int
+  sent        Int      @default(0)
+  failed      Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recipients BroadcastRecipient[]
+
+  @@index([status])
+}
+
+model BroadcastRecipient {
+  id          String    @id @default(cuid())
+  broadcastId String
+  phone       String
+  name        String
+  status      String    @default("QUEUED") // QUEUED | SENDING | SENT | FAILED
+  scheduledAt DateTime
+  sentAt      DateTime?
+  error       String?
+
+  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  @@index([broadcastId, status])
+  @@index([status, scheduledAt])
+}
