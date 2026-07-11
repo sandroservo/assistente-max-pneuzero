@@ -48,7 +48,8 @@ enum AppointmentSource {
 
 enum AppointmentRequestStatus {
   pending // Luma criou, aguardando vendedor aprovar/recusar
-  approved // vendedor aprovou — gera Appointment + envia confirmação
+  proposed // vendedor propôs melhor data/hora — aguardando o cliente confirmar
+  approved // aprovado — gera Appointment + envia confirmação
   rejected // vendedor recusou — manda alternativa pro cliente
   cancelled_by_lead // cliente desistiu antes da equipe responder
 }
@@ -739,6 +740,7 @@ model AppointmentRequest {
   serviceItemId     String?
   serviceName       String
   requestedAt       DateTime // data/hora pedida pelo cliente
+  proposedAt        DateTime? // melhor data/hora que o vendedor propôs (aguarda confirmação do cliente)
   status            AppointmentRequestStatus @default(pending)
   notes             String?                  @db.Text
   resolvedById      String? // vendedor que aprovou/recusou

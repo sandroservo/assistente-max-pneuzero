@@ -10,14 +10,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Clock, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, MessageCircle, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ApptRequest {
   id: string;
   serviceName: string;
   requestedAt: string;
-  status: "pending" | "approved" | "rejected" | "cancelled_by_lead";
+  proposedAt: string | null;
+  status: "pending" | "proposed" | "approved" | "rejected" | "cancelled_by_lead";
   notes: string | null;
   resolvedAt: string | null;
   resolvedNote: string | null;
@@ -27,6 +28,7 @@ interface ApptRequest {
 
 const STATUS_LABEL: Record<ApptRequest["status"], string> = {
   pending: "Aguardando equipe",
+  proposed: "Aguardando cliente confirmar",
   approved: "Aprovada",
   rejected: "Recusada",
   cancelled_by_lead: "Cancelada pelo cliente",
@@ -34,10 +36,19 @@ const STATUS_LABEL: Record<ApptRequest["status"], string> = {
 
 const STATUS_COLOR: Record<ApptRequest["status"], string> = {
   pending: "bg-amber-100 text-amber-800",
+  proposed: "bg-blue-100 text-blue-800",
   approved: "bg-emerald-100 text-emerald-800",
   rejected: "bg-red-100 text-red-800",
   cancelled_by_lead: "bg-gray-200 text-gray-600",
 };
+
+// Valor default pro input datetime-local: agora + 1 dia, arredondado, no fuso local.
+function defaultProposeValue(): string {
+  const d = new Date(Date.now() + 24 * 3600 * 1000);
+  d.setMinutes(0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 function fmt(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", {
@@ -56,6 +67,8 @@ export function SolicitacoesPendentes() {
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [tick, setTick] = useState(0);
   const [actingOn, setActingOn] = useState<string | null>(null);
+  const [proposingId, setProposingId] = useState<string | null>(null);
+  const [proposeValue, setProposeValue] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +93,29 @@ export function SolicitacoesPendentes() {
         const j = await res.json().catch(() => ({}));
         alert("Erro: " + (j.error ?? res.status));
       } else {
+        setTick((t) => t + 1);
+      }
+    } finally {
+      setActingOn(null);
+    }
+  }, []);
+
+  const propose = useCallback(async (id: string, value: string) => {
+    if (!value) return;
+    // datetime-local vem sem fuso; new Date() interpreta no fuso do navegador (correto pro vendedor).
+    const iso = new Date(value).toISOString();
+    setActingOn(id);
+    try {
+      const res = await fetch(`/api/appointment-requests/${id}/propose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proposedAt: iso }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert("Erro: " + (j.error ?? res.status));
+      } else {
+        setProposingId(null);
         setTick((t) => t + 1);
       }
     } finally {
@@ -167,6 +203,11 @@ export function SolicitacoesPendentes() {
                 >
                   <MessageCircle className="w-3 h-3" /> {r.lead.phone}
                 </a>
+                {r.status === "proposed" && r.proposedAt && (
+                  <p className="text-xs text-blue-700 mt-1 font-medium">
+                    🕐 Proposto: {fmt(r.proposedAt)} — aguardando o cliente confirmar no WhatsApp
+                  </p>
+                )}
                 {r.notes && <p className="text-xs text-gray-500 italic mt-1">📝 {r.notes}</p>}
                 {r.resolvedAt && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -174,9 +215,46 @@ export function SolicitacoesPendentes() {
                     {r.resolvedNote ? ` — ${r.resolvedNote}` : ""}
                   </p>
                 )}
+
+                {proposingId === r.id && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg p-2">
+                    <input
+                      type="datetime-local"
+                      value={proposeValue}
+                      onChange={(e) => setProposeValue(e.target.value)}
+                      className="text-sm px-2 py-1 border border-blue-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => propose(r.id, proposeValue)}
+                      disabled={actingOn === r.id || !proposeValue}
+                      className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      Enviar ao cliente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProposingId(null)}
+                      className="text-xs px-2 py-1.5 text-gray-500 hover:text-gray-700"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
               </div>
-              {r.status === "pending" && (
+              {(r.status === "pending" || r.status === "proposed") && (
                 <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProposeValue(defaultProposeValue());
+                      setProposingId(proposingId === r.id ? null : r.id);
+                    }}
+                    disabled={actingOn === r.id}
+                    className="text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 disabled:opacity-50 inline-flex items-center gap-1"
+                  >
+                    <CalendarClock className="w-3 h-3" /> {r.status === "proposed" ? "Alterar horário" : "Propor horário"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => approve(r.id)}

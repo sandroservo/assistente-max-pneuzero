@@ -354,6 +354,29 @@ export async function generateAIResponse(
       contextParts.push(vehicleBlock);
     }
 
+    // Proposta de horário pendente: vendedor propôs uma data/hora e aguarda o
+    // cliente confirmar. Se o cliente aceitar, Luma chama confirmar_proposta.
+    const pendingProposal = await prisma.appointmentRequest.findFirst({
+      where: { leadId: context.leadId, status: "proposed", proposedAt: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      select: { serviceName: true, proposedAt: true },
+    });
+    if (pendingProposal?.proposedAt) {
+      const dataFmt = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        weekday: "long",
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(pendingProposal.proposedAt);
+      contextParts.push(
+        `PROPOSTA DE HORÁRIO PENDENTE: o vendedor propôs *${pendingProposal.serviceName}* em *${dataFmt}* e está aguardando ESTE cliente confirmar. ` +
+        `Se o cliente ACEITAR/confirmar esse horário (ex: "pode confirmar", "tá ótimo", "fechado", "esse serve"), chame a tool confirmar_proposta e depois confirme pra ele com naturalidade. ` +
+        `Se ele pedir OUTRO horário ou recusar, não chame a tool — apenas responda que vai verificar com a equipe.`
+      );
+    }
+
     // Resumo da conversa salvo (Lead.summary): contexto comprimido de tudo
     // que aconteceu antes da janela de histórico. Crucial para conversas
     // longas onde as msgs antigas saíram da janela.

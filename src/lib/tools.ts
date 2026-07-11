@@ -17,7 +17,7 @@ import {
   cancelAppointment,
   formatBR,
 } from "./appointments";
-import { createAppointmentRequest } from "./appointment-requests";
+import { createAppointmentRequest, confirmAppointmentProposalForLead } from "./appointment-requests";
 import { postBotToGeneral } from "./team-bot";
 import { pushToActiveAgents } from "./web-push";
 import { publishNotif } from "./notifications-bus";
@@ -166,6 +166,19 @@ export const TOOL_DEFINITIONS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "confirmar_proposta",
+      description:
+        "Use APENAS quando o sistema tiver injetado uma PROPOSTA DE HORÁRIO PENDENTE (o vendedor propôs uma data/hora e está aguardando o cliente confirmar) E o cliente ACABOU de confirmar/aceitar esse horário (ex: 'pode confirmar', 'tá ótimo', 'fechado', 'esse horário serve'). Cria o agendamento no horário proposto. Depois, confirme pro cliente com naturalidade que está agendado. NÃO use se não houver proposta pendente ou se o cliente não aceitou.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "atualizar_status",
       description:
         "Atualiza o estágio do lead no funil quando houver sinal CLARO na conversa. QUALIFICADO=intenção concreta de agendar; EM_NEGOCIACAO=discutindo pagamento/desconto; FECHADO=confirmou compra/agendamento; PERDIDO=desistiu explicitamente; LEAD_FRIO=adiando sem compromisso. Em dúvida, NÃO chame.",
@@ -289,6 +302,9 @@ export async function executeTool(
       case "atualizar_status":
         result = await execAtualizarStatus(args as AtualizarStatusArgs, ctx);
         break;
+      case "confirmar_proposta":
+        result = await execConfirmarProposta(ctx);
+        break;
       default:
         result = JSON.stringify({ error: `Tool desconhecida: ${name}` });
     }
@@ -325,6 +341,19 @@ async function execAtualizarStatus(
   });
   console.log(`[tool] atualizar_status lead=${ctx.leadId} ${lead.status} → ${args.status} (${args.motivo})`);
   return JSON.stringify({ ok: true, statusAnterior: lead.status, statusNovo: args.status });
+}
+
+async function execConfirmarProposta(ctx: ToolContext): Promise<string> {
+  const result = await confirmAppointmentProposalForLead(ctx.leadId);
+  if (!result) {
+    return JSON.stringify({ ok: false, motivo: "Nenhuma proposta de horário pendente para este cliente." });
+  }
+  return JSON.stringify({
+    ok: true,
+    servico: result.serviceName,
+    dataHora: result.dataFmt,
+    instrucao: "Agendamento criado. Confirme pro cliente com naturalidade que está tudo certo pra essa data/hora.",
+  });
 }
 
 async function execRegistrarVeiculo(
