@@ -12,9 +12,13 @@ type SendTextArgs = {
 
 async function getEvolutionConfig() {
   const settings = await getSystemSettings();
+  const rawInstance = settings.evolutionInstance || process.env.EVOLUTION_INSTANCE || "";
   return {
     baseUrl: settings.evolutionBaseUrl || process.env.EVOLUTION_BASE_URL || "",
-    instance: settings.evolutionInstance || process.env.EVOLUTION_INSTANCE || "",
+    // `instance` é usada SÓ pra montar path de URL — encoda aqui na origem.
+    // O nome real da instância em produção tem espaço à esquerda (" PneuZero"),
+    // que sem encode vira 404 "instance does not exist" em TODO envio.
+    instance: encodeURIComponent(rawInstance),
     token: settings.evolutionToken || process.env.EVOLUTION_TOKEN || "",
   };
 }
